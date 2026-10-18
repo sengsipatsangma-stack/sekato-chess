@@ -24,6 +24,7 @@
       padding: 0;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
 
     body {
@@ -94,7 +95,6 @@
       display: flex;
     }
 
-    /* Screen Game Layout */
     #screenGame {
       padding: 8px;
       gap: 10px;
@@ -168,7 +168,7 @@
     .mini-board-preview {
       width: 100%;
       aspect-ratio: 1;
-      max-height: 200px;
+      max-height: 180px;
       border: 2px solid var(--accent-green);
       display: grid;
       grid-template-columns: repeat(8, 1fr);
@@ -192,6 +192,7 @@
       padding: 10px;
       margin-top: 10px;
       flex: 1;
+      overflow-y: auto;
     }
 
     .online-section h3 {
@@ -215,6 +216,11 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      transition: background 0.2s;
+    }
+
+    .player-item:active {
+      background: #2c3e50;
     }
 
     .player-num {
@@ -249,7 +255,7 @@
       margin-bottom: 8px;
     }
 
-    /* Fixed Perfect Square Chess Board */
+    /* Smooth Chess Board */
     .chess-board-wrapper {
       width: 100%;
       display: flex;
@@ -260,7 +266,7 @@
 
     .chess-board {
       width: 100%;
-      max-width: 360px;
+      max-width: 350px;
       aspect-ratio: 1 / 1;
       display: grid;
       grid-template-columns: repeat(8, 1fr);
@@ -280,6 +286,7 @@
       position: relative;
       width: 100%;
       height: 100%;
+      transition: background-color 0.1s;
     }
 
     .sq.light { background: var(--light-sq); }
@@ -301,14 +308,13 @@
     .piece.white { color: #ffffff; text-shadow: 0 1px 2px #000; }
     .piece.black { color: #111111; text-shadow: 0 1px 1px #fff; }
 
-    /* Middle Control Box Fix */
     .game-controls {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 6px 12px;
-      height: 50px;
-      min-height: 50px;
+      padding: 4px 12px;
+      height: 48px;
+      min-height: 48px;
       flex-shrink: 0;
     }
 
@@ -332,7 +338,6 @@
       color: var(--danger-red);
     }
 
-    /* Compact Chat Box */
     .chat-box {
       border: 2px solid var(--accent-green);
       border-radius: 8px;
@@ -341,7 +346,7 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      min-height: 100px;
+      min-height: 90px;
       overflow: hidden;
     }
 
@@ -446,7 +451,7 @@
       <div class="online-section">
         <h3>ONLINE PLAYERS LIST</h3>
         <div class="player-list" id="onlineList">
-          <!-- Numbered Player List (1, 2, 3...) -->
+          <!-- Synchronized Numbered List -->
         </div>
       </div>
     </div>
@@ -467,8 +472,8 @@
       </div>
 
       <div class="game-controls">
-        <button class="round-btn" title="Undo Move" onclick="undoMove()">↶</button>
-        <span id="turnStatus" style="font-weight: bold; color: var(--accent-yellow); font-size:16px;">White turn</span>
+        <button class="round-btn" title="Undo Move" onclick="undoMove()">⟶</button>
+        <span id="turnStatus" style="font-weight: bold; color: var(--accent-yellow); font-size:15px;">White turn</span>
         <button class="round-btn giveup-btn" title="Resign / Give Up" onclick="resignGame()">🏳</button>
       </div>
 
@@ -507,22 +512,19 @@
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
     import { getDatabase, ref, set, onValue, onDisconnect, remove } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
 
-    // Firebase database configuration
+    // 🌐 Firebase Database URL Configured Live
     const firebaseConfig = {
-      databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com"
+      databaseURL: "https://sekato-chess-default-rtdb.firebaseio.com/"
     };
 
     let db = null;
     let myUserRef = null;
 
     try {
-      if (!firebaseConfig.databaseURL.includes("YOUR_PROJECT")) {
-        const app = initializeApp(firebaseConfig);
-        db = getDatabase(app);
-      }
+      const app = initializeApp(firebaseConfig);
+      db = getDatabase(app);
     } catch(e) { console.log("Offline mode active"); }
 
-    // State Variables
     window.player = { name: '', country: '', age: '', iq: 20, id: 'user_' + Math.random().toString(36).substring(2, 7) };
     window.game = new Chess();
     window.selectedSquare = null;
@@ -605,18 +607,25 @@
       list.innerHTML = '';
       let count = 1;
 
-      // 1. Pro GM Hadibautdi
+      // 1. Pro GrandMaster hadibautdi always at #1
       const aiItem = document.createElement('div');
       aiItem.className = 'player-item';
       aiItem.innerHTML = `<div><span class="player-num">${count++}.</span><b>hadibautdi</b> <span class="badge-gm">PRO GM</span></div> <span style="color:var(--accent-yellow)">IQ 999</span>`;
       aiItem.onclick = () => openChallenge('hadibautdi', 999, true);
       list.appendChild(aiItem);
 
-      // 2. Real Friends Online
+      // 2. You and your friends synchronized live
+      if (window.player.name) {
+        const selfItem = document.createElement('div');
+        selfItem.className = 'player-item';
+        selfItem.innerHTML = `<div><span class="player-num">${count++}.</span><b>${window.player.name} (You)</b> <span style="color:var(--accent-green); font-size:11px;">● Online</span></div> <span style="color:var(--accent-green)">IQ ${window.player.iq}</span>`;
+        list.appendChild(selfItem);
+      }
+
       window.liveOnlinePlayers.forEach(p => {
         const item = document.createElement('div');
         item.className = 'player-item';
-        item.innerHTML = `<div><span class="player-num">${count++}.</span><b>${p.name}</b> <span style="color:var(--accent-green); font-size:12px;">● Online</span></div> <span style="color:var(--accent-green)">IQ ${p.iq}</span>`;
+        item.innerHTML = `<div><span class="player-num">${count++}.</span><b>${p.name}</b> <span style="color:var(--accent-green); font-size:11px;">● Online</span></div> <span style="color:var(--accent-green)">IQ ${p.iq}</span>`;
         item.onclick = () => openChallenge(p.name, p.iq, false);
         list.appendChild(item);
       });
@@ -696,7 +705,7 @@
           renderBoard();
 
           if (window.currentOpponent.isAi && !window.game.game_over()) {
-            setTimeout(makeProAiMove, 500);
+            setTimeout(makeProAiMove, 400);
           }
           return;
         }
