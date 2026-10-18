@@ -249,12 +249,22 @@
       margin-bottom: 8px;
     }
 
-    /* Perfect Square Chess Board */
+    /* Fixed Perfect Square Chess Board */
+    .chess-board-wrapper {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
     .chess-board {
       width: 100%;
+      max-width: 360px;
       aspect-ratio: 1 / 1;
       display: grid;
       grid-template-columns: repeat(8, 1fr);
+      grid-template-rows: repeat(8, 1fr);
       border: 2px solid var(--accent-green);
       border-radius: 6px;
       overflow: hidden;
@@ -265,9 +275,11 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      font-size: clamp(22px, 7.5vw, 38px);
+      font-size: clamp(20px, 6.5vw, 34px);
       cursor: pointer;
       position: relative;
+      width: 100%;
+      height: 100%;
     }
 
     .sq.light { background: var(--light-sq); }
@@ -295,14 +307,14 @@
       justify-content: space-between;
       align-items: center;
       padding: 6px 12px;
-      height: 52px;
-      min-height: 52px;
+      height: 50px;
+      min-height: 50px;
       flex-shrink: 0;
     }
 
     .round-btn {
-      width: 40px;
-      height: 40px;
+      width: 38px;
+      height: 38px;
       border-radius: 50%;
       border: 2px solid var(--accent-green);
       background: var(--card-bg);
@@ -325,11 +337,11 @@
       border: 2px solid var(--accent-green);
       border-radius: 8px;
       padding: 8px;
-      height: 120px;
+      flex: 1;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      flex-shrink: 0;
+      min-height: 100px;
       overflow: hidden;
     }
 
@@ -450,7 +462,9 @@
 
     <!-- Screen 4: Chess Board Screen -->
     <div class="screen" id="screenGame">
-      <div class="chess-board" id="mainBoard"></div>
+      <div class="chess-board-wrapper">
+        <div class="chess-board" id="mainBoard"></div>
+      </div>
 
       <div class="game-controls">
         <button class="round-btn" title="Undo Move" onclick="undoMove()">↶</button>
