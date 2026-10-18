@@ -3,813 +3,741 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Board Boss Chess</title>
+  <title>SEKATO CHESS</title>
   <style>
     :root {
-      --bg: #10131b;
-      --panel: #1b202b;
-      --line: #343d4c;
-      --text: #f4f6fb;
-      --muted: #aeb8c8;
-      --accent: #80d6b1;
-      --light: #e8e2d5;
-      --dark: #77917e;
+      --bg: #12181b;
+      --card-bg: #1e262c;
+      --accent-green: #2ecc71;
+      --accent-yellow: #f1c40f;
+      --danger-red: #e74c3c;
+      --text-light: #ffffff;
+      --text-muted: #bdc3c7;
+      --border-color: #2c3e50;
+      --light-sq: #e8e2d5;
+      --dark-sq: #507e60;
     }
 
     * {
       box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      user-select: none;
     }
 
     body {
-      margin: 0;
+      background-color: var(--bg);
+      color: var(--text-light);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 480px;
+      height: 100vh;
+      max-height: 850px;
       background: var(--bg);
-      color: var(--text);
-      font: 16px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      border: 2px solid var(--accent-green);
+      border-radius: 12px;
     }
 
-    main {
-      max-width: 1120px;
-      margin: auto;
+    .header-bar {
+      height: 60px;
+      border-bottom: 2px solid var(--accent-green);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      position: relative;
+    }
+
+    .back-btn {
+      background: transparent;
+      border: 2px solid var(--accent-green);
+      color: var(--accent-green);
+      border-radius: 50%;
+      width: 38px;
+      height: 38px;
+      font-size: 20px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .header-title {
+      flex: 1;
+      text-align: center;
+      font-size: 22px;
+      font-weight: bold;
+      color: var(--accent-yellow);
+      letter-spacing: 1px;
+    }
+
+    .screen {
+      flex: 1;
+      display: none;
+      flex-direction: column;
       padding: 20px;
+      overflow-y: auto;
     }
 
-    h1 {
-      margin: 0;
-      font-size: clamp(25px, 5vw, 38px);
+    .screen.active {
+      display: flex;
     }
 
-    .sub {
-      color: var(--muted);
-      margin: 4px 0 18px;
+    /* Registration Screen */
+    .title-banner {
+      text-align: center;
+      margin-bottom: 25px;
     }
 
-    .top {
+    .title-banner h1 {
+      font-size: 32px;
+      color: var(--accent-yellow);
+      margin-bottom: 5px;
+    }
+
+    .title-banner span {
+      font-size: 26px;
+      color: var(--accent-green);
+    }
+
+    .form-card {
+      background: var(--card-bg);
+      border: 2px solid var(--accent-green);
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .input-group {
       display: flex;
       gap: 10px;
-      flex-wrap: wrap;
-      align-items: center;
-      margin-bottom: 16px;
     }
 
-    .pill {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      padding: 8px 12px;
-      color: var(--muted);
-      font-size: 14px;
+    input, select {
+      width: 100%;
+      padding: 12px;
+      background: #111;
+      border: 1px solid var(--accent-green);
+      color: #fff;
+      border-radius: 8px;
+      font-size: 16px;
+      outline: none;
     }
 
-    button, input, select {
-      font: inherit;
-      border-radius: 10px;
-      border: 1px solid var(--line);
-      padding: 10px 13px;
-      background: #252d3a;
-      color: var(--text);
-    }
-
-    button {
+    .save-btn, .challenge-btn, .start-btn {
+      background: var(--accent-green);
+      color: #111;
+      font-size: 18px;
+      font-weight: bold;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
       cursor: pointer;
-      font-weight: 650;
+      margin-top: 10px;
+      text-align: center;
     }
 
-    button.primary {
-      background: var(--accent);
-      color: #10251d;
-      border-color: transparent;
+    .option-list {
+      margin-top: 15px;
+      font-size: 14px;
+      color: var(--accent-green);
+      line-height: 1.8;
     }
 
-    button:disabled {
-      opacity: 0.45;
-      cursor: not-allowed;
-    }
-
-    .layout {
-      display: grid;
-      grid-template-columns: minmax(280px, 1.2fr) minmax(270px, 0.8fr);
-      gap: 16px;
-      align-items: start;
-    }
-
-    .panel {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 14px;
-      margin-bottom: 12px;
-    }
-
-    .board {
-      display: grid;
-      grid-template-columns: repeat(8, 1fr);
+    /* Lobby Screen */
+    .mini-board-preview {
       width: 100%;
       aspect-ratio: 1;
-      border: 4px solid #2b3039;
+      border: 2px solid var(--accent-green);
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      margin-bottom: 15px;
       border-radius: 8px;
       overflow: hidden;
-      touch-action: manipulation;
+    }
+
+    .mini-sq {
+      width: 100%;
+      height: 100%;
+    }
+
+    .mini-sq.light { background: var(--light-sq); }
+    .mini-sq.dark { background: var(--dark-sq); }
+
+    .online-section {
+      border: 2px solid var(--accent-green);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 10px;
+      flex: 1;
+    }
+
+    .online-section h3 {
+      color: var(--accent-green);
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+
+    .player-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .player-item {
+      padding: 10px;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .player-item:hover {
+      border-color: var(--accent-green);
+    }
+
+    .player-num {
+      color: var(--accent-yellow);
+      font-weight: bold;
+      margin-right: 6px;
+    }
+
+    .badge-gm {
+      background: var(--accent-yellow);
+      color: #111;
+      font-size: 11px;
+      font-weight: bold;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-left: 6px;
+    }
+
+    /* Challenge Modal */
+    .challenge-card {
+      background: var(--card-bg);
+      border: 2px solid var(--accent-green);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      margin: auto 0;
+    }
+
+    .challenge-card h2 {
+      color: var(--accent-green);
+      font-size: 26px;
+      margin-bottom: 10px;
+    }
+
+    .challenge-card p {
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    /* Chess Board Screen */
+    .chess-board {
+      width: 100%;
+      aspect-ratio: 1;
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      border: 3px solid var(--accent-green);
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 12px;
     }
 
     .sq {
       display: flex;
-      align-items: center;
       justify-content: center;
-      position: relative;
-      font-size: clamp(27px, 7vw, 62px);
-      line-height: 1;
-      user-select: none;
+      align-items: center;
+      font-size: clamp(24px, 8vw, 42px);
       cursor: pointer;
+      position: relative;
     }
 
-    .sq.light { background: var(--light); }
-    .sq.dark { background: var(--dark); }
-    .sq.selected { box-shadow: inset 0 0 0 5px #ffd45d; }
+    .sq.light { background: var(--light-sq); }
+    .sq.dark { background: var(--dark-sq); }
 
-    .sq.target:after {
-      content: "";
-      position: absolute;
-      width: 22%;
-      height: 22%;
+    .sq.selected {
+      box-shadow: inset 0 0 0 4px var(--accent-yellow);
+    }
+
+    .sq.target::after {
+      content: '';
+      width: 14px;
+      height: 14px;
+      background: rgba(0, 0, 0, 0.3);
       border-radius: 50%;
-      background: rgba(23, 34, 26, 0.47);
-    }
-
-    .sq.target.haspiece:after {
-      width: 85%;
-      height: 85%;
-      border: 5px solid rgba(23, 34, 26, 0.47);
-      background: transparent;
-    }
-
-    .piece.white {
-      color: #fff;
-      text-shadow: 0 2px 3px #333, 1px 0 #333, -1px 0 #333;
-    }
-
-    .piece.black {
-      color: #20242b;
-      text-shadow: 0 1px 1px rgba(255, 255, 255, 0.53);
-    }
-
-    .coords {
       position: absolute;
-      left: 4px;
-      bottom: 2px;
-      font-size: 10px;
-      font-weight: 700;
-      opacity: 0.72;
-      color: #25312a;
     }
 
-    .status {
-      margin: 12px 0 0;
-      padding: 10px;
-      border-radius: 10px;
-      background: #111720;
-      color: var(--accent);
-      font-weight: 700;
-    }
+    .piece.white { color: #ffffff; text-shadow: 0 1px 2px #000; }
+    .piece.black { color: #111111; text-shadow: 0 1px 1px #fff; }
 
-    .sectiontitle {
-      margin: 0 0 10px;
-      font-size: 17px;
-    }
-
-    .row {
+    .game-controls {
       display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-bottom: 8px;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
     }
 
-    .row input, .row select {
-      min-width: 0;
-      flex: 1;
+    .round-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 2px solid var(--accent-green);
+      background: var(--card-bg);
+      color: var(--accent-green);
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
 
-    .small {
-      font-size: 13px;
-      color: var(--muted);
-      line-height: 1.45;
+    .giveup-btn {
+      border-color: var(--danger-red);
+      color: var(--danger-red);
     }
 
-    .chatlog, .moves {
-      height: 210px;
-      overflow: auto;
-      background: #111720;
-      border-radius: 10px;
+    .chat-box {
+      border: 2px solid var(--accent-green);
+      border-radius: 8px;
       padding: 10px;
-      margin: 10px 0;
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 140px;
     }
 
-    .chatline {
-      padding: 5px 0;
-      border-bottom: 1px solid #252c37;
-    }
-
-    .chatline b {
-      color: var(--accent);
-    }
-
-    .moveitem {
+    .messages {
       font-size: 14px;
-      padding: 3px 0;
-      color: #d5dbe5;
+      color: var(--text-light);
+      overflow-y: auto;
+      max-height: 90px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
     }
 
-    .foot {
-      margin-top: 15px;
-      color: var(--muted);
-      font-size: 12px;
+    .chat-input-row {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
     }
 
-    @media (max-width: 760px) {
-      main { padding: 12px; }
-      .layout { grid-template-columns: 1fr; }
-      .side { display: grid; gap: 12px; }
-      .sq { font-size: clamp(28px, 10vw, 54px); }
+    .chat-input-row input {
+      padding: 8px;
+      font-size: 14px;
+    }
+
+    /* Result Screens */
+    .result-card {
+      margin: auto;
+      width: 80%;
+      padding: 30px;
+      border-radius: 12px;
+      text-align: center;
+      border: 3px solid;
+    }
+
+    .result-card.win {
+      border-color: var(--accent-green);
+      background: #13271b;
+    }
+
+    .result-card.win h2 {
+      color: var(--accent-green);
+      font-size: 32px;
+    }
+
+    .result-card.lose {
+      border-color: var(--danger-red);
+      background: #2a1515;
+    }
+
+    .result-card.lose h2 {
+      color: var(--danger-red);
+      font-size: 32px;
+    }
+
+    .result-card p {
+      font-size: 20px;
+      margin-top: 10px;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
 
-  <main>
-    <h1>♟ Board Boss Chess</h1>
-    <div class="sub">A little 2D chess room for you and your friend.</div>
-
-    <div class="top">
-      <span class="pill" id="connection">Connecting...</span>
-      <span class="pill" id="iqBadge">IQ: 20</span>
-      <span class="pill" id="playerIdBadge">Player ID: —</span>
-      <span class="pill" id="roomBadge">Room: not joined</span>
-      <span class="pill" id="roleBadge">Seat: —</span>
-      <span class="pill" id="clockBadge">Clock: —</span>
+  <div class="app-container">
+    <!-- Header -->
+    <div class="header-bar">
+      <button class="back-btn" id="headerBackBtn" onclick="goBack()">⟲</button>
+      <div class="header-title" id="headerTitle">SEKATO CHESS</div>
     </div>
 
-    <div class="layout">
-      <div class="main-area">
-        <div class="panel">
-          <div class="board" id="board"></div>
-          <div class="status" id="status">Create or join a room to begin.</div>
-          <div class="small" id="turnHint" style="margin-top: 6px;">White moves first.</div>
-        </div>
-
-        <div class="panel">
-          <div class="row">
-            <button id="flipBtn">Flip board</button>
-            <button id="undoBtn" disabled>Undo last move</button>
-            <button id="newGameBtn" disabled>New game in this room</button>
-          </div>
-        </div>
+    <!-- Screen 1: Registration -->
+    <div class="screen active" id="screenProfile">
+      <div class="title-banner">
+        👑
+        <h1>SEKATO</h1>
+        <span>CHESS</span>
       </div>
 
-      <div class="side">
-        <div class="panel">
-          <h2 class="sectiontitle">Join or create a room</h2>
-          <div class="row">
-            <input type="text" id="playerName" placeholder="Enter your player name" maxlength="24">
-            <select id="avatarChoice">
-              <option value="👦">Boy 1 · short hair</option>
-              <option value="🧑">Boy 2 · curly hair</option>
-              <option value="👨">Boy 3 · red hair</option>
-              <option value="👱‍♂️">Boy 4 · light hair</option>
-              <option value="🧔">Boy 5 · dark curly hair</option>
-              <option value="👧">Girl 1 · long hair</option>
-              <option value="👩">Girl 2 · red hair</option>
-              <option value="👩‍🦱">Girl 3 · curly hair</option>
-              <option value="👩‍💼">Girl 4 · dark hair</option>
-              <option value="👱‍♀️">Girl 5 · light hair</option>
-            </select>
-          </div>
-          <div class="row">
-            <select id="timeChoice">
-              <option value="10">Time: 10 minutes</option>
-              <option value="20">Time: 20 minutes</option>
-              <option value="30">Time: 30 minutes</option>
-            </select>
-            <button class="primary" id="createBtn">Create room</button>
-          </div>
-          <div class="row">
-            <input type="text" id="roomInput" placeholder="Room code">
-            <button id="joinBtn">Join room</button>
-            <button id="copyBtn" disabled>Copy invite link</button>
-          </div>
-          <div class="small" style="margin-top: 8px;">
-            Enter your name, create a room, then send your friend the invite link. Your friend enters their name and opens the link to join.
-          </div>
+      <div class="form-card">
+        <input type="text" id="profName" placeholder="Name" maxlength="16">
+        <div class="input-group">
+          <input type="text" id="profCountry" placeholder="Country">
+          <input type="number" id="profAge" placeholder="Age" style="width: 80px;">
         </div>
+        <select id="profSkill">
+          <option value="first">1) First time (+30 IQ)</option>
+          <option value="medium">2) Medium (+25 IQ)</option>
+          <option value="expert">3) Expert (+20 IQ)</option>
+        </select>
+        <button class="save-btn" onclick="saveProfile()">SAVE</button>
+      </div>
 
-        <div class="panel">
-          <h2 class="sectiontitle">Room chat</h2>
-          <div class="chatlog" id="chatlog">
-            <div class="small">Join a room to chat with your opponent.</div>
-          </div>
-          <form id="chatForm" class="row">
-            <input type="text" id="chatInput" placeholder="Write a message..." disabled>
-            <button type="submit" id="sendBtn" disabled>Send</button>
-          </form>
-          <div class="small">Please keep messages friendly. Chat is visible to both players in this room.</div>
-        </div>
+      <div class="option-list">
+        OPTION:<br>
+        1) First time ➔ 30 IQ<br>
+        2) Medium ➔ 25 IQ<br>
+        3) Expert ➔ 20 IQ
+      </div>
+    </div>
 
-        <div class="panel">
-          <h2 class="sectiontitle">Moves</h2>
-          <div class="moves" id="moves">
-            <span class="small">Moves will appear here.</span>
-          </div>
-        </div>
+    <!-- Screen 2: Lobby -->
+    <div class="screen" id="screenLobby">
+      <div class="mini-board-preview" id="miniBoard"></div>
 
-        <div class="panel">
-          <h2 class="sectiontitle">IQ leaderboard 🏆</h2>
-          <div class="row">
-            <input type="text" id="playerSearch" placeholder="Search players...">
-            <button id="searchBtn">Search</button>
-          </div>
-          <div id="leaderboard" style="margin-top: 10px;">
-            <span class="small">Connect to load players.</span>
-          </div>
-          <div class="foot">
-            Winner: +50 IQ · Loser: −5 IQ · Starting IQ: 20.<br>
-            Firebase is required for real-time rooms and chat. Configure it in the code before publishing.
-          </div>
+      <button class="start-btn" onclick="startMatching()">CHALLENGE START</button>
+
+      <div class="online-section">
+        <h3>ONLINE PLAYERS LIST</h3>
+        <div class="player-list" id="onlineList">
+          <!-- Numbered Player List (1, 2, 3...) -->
         </div>
       </div>
     </div>
-  </main>
 
+    <!-- Screen 3: Challenge Modal -->
+    <div class="screen" id="screenChallenge">
+      <div class="challenge-card">
+        <h2 id="oppNameDisplay">hadibautdi</h2>
+        <p>IQ: <span id="oppIqDisplay">999</span></p>
+        <button class="challenge-btn" onclick="launchGame()">CHALLENGE</button>
+      </div>
+    </div>
+
+    <!-- Screen 4: Chess Board -->
+    <div class="screen" id="screenGame">
+      <div class="chess-board" id="mainBoard"></div>
+
+      <div class="game-controls">
+        <button class="round-btn" title="Undo Move" onclick="undoMove()">↶</button>
+        <span id="turnStatus" style="font-weight: bold; color: var(--accent-yellow);">White turn</span>
+        <button class="round-btn giveup-btn" title="Resign / Give Up" onclick="resignGame()">🏳</button>
+      </div>
+
+      <div class="chat-box">
+        <div class="messages" id="chatMessages">
+          <div><i>Unlimited Chat & Emojis active 😊♟️🔥</i></div>
+        </div>
+        <div class="chat-input-row">
+          <input type="text" id="chatInput" placeholder="Write unlimited text & emojis 😊...">
+          <button class="save-btn" style="padding: 6px 12px; margin-top:0;" onclick="sendText()">Send</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Screen 5: WIN Screen -->
+    <div class="screen" id="screenWin">
+      <div class="result-card win">
+        <h2>YOU WIN</h2>
+        <p>IQ +50</p>
+        <button class="save-btn" style="margin-top: 20px;" onclick="switchScreen('screenLobby')">CONTINUE</button>
+      </div>
+    </div>
+
+    <!-- Screen 6: LOSE Screen -->
+    <div class="screen" id="screenLose">
+      <div class="result-card lose">
+        <h2>YOU LOSE</h2>
+        <p>IQ -5</p>
+        <button class="save-btn" style="margin-top: 20px; background: var(--danger-red); color:#fff;" onclick="switchScreen('screenLobby')">CONTINUE</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
   <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js';
-    import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js';
-    import { getDatabase, ref, set, get, update, onValue, push, runTransaction } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js';
-    import { Chess } from 'https://cdn.jsdelivr.net/npm/chess.js@1.0.0/+esm';
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+    import { getDatabase, ref, set, onValue, onDisconnect, remove } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
 
-    // Replace these placeholder values with your Firebase web-app config if enabling real-time multiplayer.
+    // Firebase database configuration
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT.firebaseapp.com",
-      databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
-      projectId: "YOUR_PROJECT",
-      appId: "YOUR_APP_ID"
+      databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com"
     };
 
-    const configured = !Object.values(firebaseConfig).some(v => String(v).includes('YOUR_'));
-    let app, auth, db, user = null, roomId = null, seat = null, game = new Chess(), roomData = null, unsubRoom = null, unsubChat = null, unsubPlayers = null, flipped = false, selected = null, legalTargets = [], profile = null, clockTick = null;
-    const playerIdKey = "boardBossPlayerId";
+    let db = null;
+    let myUserRef = null;
 
-    function makePlayerId() { return "BB-" + Math.random().toString(36).slice(2, 7).toUpperCase(); }
-    function localPlayerId() {
-      let id = localStorage.getItem(playerIdKey);
-      if (!id) { id = makePlayerId(); localStorage.setItem(playerIdKey, id); }
-      return id;
-    }
-
-    const $ = id => document.getElementById(id);
-    const playerName = () => $('playerName').value.trim().slice(0, 24);
-    const chosenAvatar = () => $('avatarChoice').value || '👤';
-    const seatName = (color) => roomData?.[color + 'Name'] || (color === 'white' ? 'White' : 'Black');
-    const files = 'abcdefgh';
-    const symbols = { wk: '♔', wq: '♕', wr: '♖', wb: '♗', wn: '♘', wp: '♙', bk: '♚', bq: '♛', br: '♜', bb: '♝', bn: '♞', bp: '♟' };
-
-    function sayStatus(t) { $('status').textContent = t; }
-
-    function tone(kind) {
-      try {
-        const C = window.AudioContext || window.webkitAudioContext;
-        if (!C) return;
-        const c = new C(), now = c.currentTime;
-        const notes = kind === 'mate' ? [660, 880, 1100] : kind === 'check' ? [740, 520] : kind === 'move' ? [420] : kind === 'capture' ? [260, 390] : [520];
-        notes.forEach((f, i) => {
-          let o = c.createOscillator(), g = c.createGain();
-          o.type = kind === 'mate' ? 'triangle' : 'sine';
-          o.frequency.value = f;
-          g.gain.setValueAtTime(.0001, now + i * .12);
-          g.gain.exponentialRampToValueAtTime(.13, now + i * .12 + .02);
-          g.gain.exponentialRampToValueAtTime(.0001, now + i * .12 + .16);
-          o.connect(g);
-          g.connect(c.destination);
-          o.start(now + i * .12);
-          o.stop(now + i * .12 + .18);
-        });
-        setTimeout(() => c.close(), 900);
-      } catch (e) {}
-    }
-
-    function statusText() {
-      if (game.isCheckmate()) return `Checkmate! ${game.turn() === 'w' ? 'Black' : 'White'} wins.`;
-      if (game.isDraw()) return 'Draw — the game is over.';
-      return `${game.turn() === 'w' ? 'White' : 'Black'} to move${game.isCheck() ? ' — CHECK!' : ''}`;
-    }
-
-    function fmtTime(ms) {
-      ms = Math.max(0, Math.ceil(ms / 1000));
-      return String(Math.floor(ms / 60)).padStart(2, '0') + ":" + String(ms % 60).padStart(2, '0');
-    }
-
-    function updateClock() {
-      if (!roomData?.startedAt || !roomData?.timeLimitMs) {
-        $('clockBadge').textContent = 'Clock: —';
-        return;
-      }
-      let elapsed = Date.now() - roomData.startedAt;
-      let remaining = Math.max(0, roomData.timeLimitMs - elapsed);
-      $('clockBadge').textContent = 'Clock: ' + fmtTime(remaining);
-      if (remaining === 0 && !game.isGameOver()) {
-        sayStatus('Time is up. The game needs a timeout result.');
-      }
-    }
-
-    async function ensureProfile() {
-      if (!user) return;
-      let pr = ref(db, 'players/' + user.uid), snap = await get(pr);
-      if (!snap.exists()) {
-        profile = { uid: user.uid, name: playerName(), playerId: localPlayerId(), avatar: chosenAvatar(), iq: 20 };
-        await set(pr, profile);
-      } else {
-        profile = snap.val();
-        if (!profile.playerId) {
-          profile.playerId = localPlayerId();
-          await update(pr, { playerId: profile.playerId });
-        }
-        if (playerName() && profile.name !== playerName()) await update(pr, { name: playerName() });
-        if (chosenAvatar() && profile.avatar !== chosenAvatar()) await update(pr, { avatar: chosenAvatar() });
-      }
-      refreshProfileUI();
-    }
-
-    function refreshProfileUI() {
-      if (!profile) return;
-      $('iqBadge').textContent = 'IQ: ' + (profile.iq ?? 20);
-      $('playerIdBadge').textContent = 'Player ID: ' + (profile.playerId || '—');
-    }
-
-    async function applyResultOnce() {
-      if (!roomId || !user || !roomData || !game.isGameOver() || roomData.resultApplied) return;
-      let outcome = game.isCheckmate() ? (game.turn() === 'w' ? 'black' : 'white') : 'draw';
-      let rr = ref(db, 'rooms/' + roomId);
-      try {
-        let tx = await runTransaction(rr, current => {
-          if (!current || current.resultApplied) return;
-          current.resultApplied = true;
-          current.result = outcome;
-          return current;
-        });
-        if (!tx.committed) return;
-
-        let players = [];
-        if (outcome === 'draw') return;
-
-        players.push({ uid: roomData[outcome + 'Uid'], name: roomData[outcome + 'Name'], delta: 50 });
-        let loser = outcome === 'white' ? 'black' : 'white';
-        players.push({ uid: roomData[loser + 'Uid'], name: roomData[loser + 'Name'], delta: -5 });
-
-        for (let p of players) {
-          if (!p.uid) continue;
-          let pr = ref(db, 'players/' + p.uid);
-          await runTransaction(pr, current => {
-            if (!current) return;
-            let next = (Number(current.iq) || 20) + p.delta;
-            if (next <= 0 || next >= 200000) {
-              return { ...current, iq: 20, name: null, playerId: makePlayerId(), resetAt: Date.now() };
-            }
-            return { ...current, iq: next };
-          });
-        }
-
-        if (user) {
-          let ps = (await get(ref(db, 'players/' + user.uid))).val();
-          if (ps) { profile = ps; refreshProfileUI(); }
-        }
-      } catch (e) {
-        console.warn('Could not update IQ:', e);
-      }
-    }
-
-    function subscribeLeaderboard() {
-      if (unsubPlayers) unsubPlayers();
-      unsubPlayers = onValue(ref(db, 'players'), snap => {
-        let arr = [];
-        snap.forEach(ch => {
-          let p = ch.val();
-          if (p && p.name && typeof p.iq === 'number') arr.push(p);
-        });
-        arr.sort((a, b) => b.iq - a.iq);
-        let q = $('playerSearch').value.trim().toLowerCase();
-        let shown = q ? arr.filter(p => (p.playerId || '').toLowerCase().includes(q) || p.name.toLowerCase().includes(q)) : arr;
-        let html = '';
-        shown.slice(0, 50).forEach((p, i) => {
-          html += `<div class="moveitem">${i === 0 && !q ? '👑 Crown · ' : ''}${i + 1}. ${escapeHtml(p.name)} · ${escapeHtml(p.playerId || '')} · IQ ${p.iq}</div>`;
-        });
-        $('leaderboard').innerHTML = html || '<span class="small">No matching players.</span>';
-      });
-    }
-
-    function escapeHtml(v) {
-      return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-    }
-
-    function render() {
-      const board = $('board');
-      board.innerHTML = '';
-      const b = game.board();
-
-      for (let ri = 0; ri < 8; ri++) {
-        for (let ci = 0; ci < 8; ci++) {
-          let r = flipped ? 7 - ri : ri, c = flipped ? 7 - ci : ci;
-          let sq = files[c] + (8 - r), p = b[r][c], el = document.createElement('div');
-          el.className = 'sq ' + ((r + c) % 2 ? 'dark' : 'light');
-          el.dataset.square = sq;
-
-          if (selected === sq) el.classList.add('selected');
-          if (legalTargets.includes(sq)) el.classList.add('target');
-
-          if (p) {
-            el.classList.add('haspiece');
-            let span = document.createElement('span');
-            span.className = 'piece ' + (p.color === 'w' ? 'white' : 'black');
-            span.textContent = symbols[p.color + p.type];
-            el.appendChild(span);
-          }
-
-          if (ci === 0) {
-            let co = document.createElement('span');
-            co.className = 'coords';
-            co.textContent = 8 - r;
-            el.appendChild(co);
-          }
-
-          el.addEventListener('click', () => tapSquare(sq));
-          board.appendChild(el);
-        }
-      }
-
-      $('status').textContent = roomId ? statusText() : 'Create or join a room to begin.';
-      $('turnHint').textContent = roomData?.whiteUid && roomData?.blackUid ? 'Both seats are connected.' : roomId ? 'Waiting for your friend to join…' : 'White moves first.';
-
-      $('moves').innerHTML = '';
-      let hist = game.history();
-      if (!hist.length) {
-        $('moves').innerHTML = '<span class="small">Moves will appear here.</span>';
-      } else {
-        for (let i = 0; i < hist.length; i += 2) {
-          let div = document.createElement('div');
-          div.className = 'moveitem';
-          div.textContent = `${i / 2 + 1}. ${hist[i] || ''} ${hist[i + 1] || ''}`;
-          $('moves').appendChild(div);
-        }
-      }
-
-      $('undoBtn').disabled = !roomId || !hist.length || !user || roomData?.[seat + 'Uid'] !== user.uid;
-      $('newGameBtn').disabled = !roomId || !user || roomData?.[seat + 'Uid'] !== user.uid;
-      updateClock();
-      if (game.isGameOver()) applyResultOnce();
-    }
-
-    function tapSquare(sq) {
-      if (!roomId || !user || !roomData) return;
-      if (roomData[seat + 'Uid'] !== user.uid) { sayStatus('You are watching this room.'); return; }
-      if (game.isGameOver()) return;
-      if (game.turn() !== seat[0]) { sayStatus('Wait for your turn.'); return; }
-
-      let p = game.get(sq);
-      if (selected && legalTargets.includes(sq)) {
-        makeMove(selected, sq);
-        return;
-      }
-
-      if (p && p.color === game.turn()) {
-        selected = sq;
-        legalTargets = game.moves({ square: sq, verbose: true }).map(m => m.to);
-        render();
-      } else {
-        selected = null;
-        legalTargets = [];
-        render();
-      }
-    }
-
-    async function makeMove(from, to) {
-      let piece = game.get(from);
-      let promotion = piece?.type === 'p' && (to[1] === '8' || to[1] === '1') ? 'q' : undefined;
-      try {
-        let move = game.move({ from, to, promotion });
-        selected = null;
-        legalTargets = [];
-        tone(move.captured ? 'capture' : 'move');
-        if (game.isCheckmate()) tone('mate');
-        else if (game.isCheck()) tone('check');
-        render();
-        await update(ref(db, 'rooms/' + roomId), {
-          fen: game.fen(),
-          history: game.history(),
-          lastMove: move.san,
-          lastMoveBy: user.uid,
-          updatedAt: Date.now()
-        });
-      } catch (e) {
-        selected = null;
-        legalTargets = [];
-        render();
-      }
-    }
-
-    async function start() {
-      if (!configured) {
-        $('connection').textContent = 'Local Mode (No Firebase)';
-        sayStatus('Add Firebase config to enable online rooms & live chat.');
-        return;
-      }
-      try {
-        app = initializeApp(firebaseConfig);
-        auth = getAuth(app);
+    try {
+      if (!firebaseConfig.databaseURL.includes("YOUR_PROJECT")) {
+        const app = initializeApp(firebaseConfig);
         db = getDatabase(app);
-        let cred = await signInAnonymously(auth);
-        user = cred.user;
-        $('connection').textContent = 'Connected';
-
-        let params = new URLSearchParams(location.search);
-        let incoming = params.get('room');
-        if (incoming) {
-          $('roomInput').value = incoming.toUpperCase();
-          if (playerName()) await joinRoom(incoming.toUpperCase());
-          else sayStatus('Enter your player name, then click Join room to enter this invite.');
-        }
-      } catch (e) {
-        $('connection').textContent = 'Connection error';
-        sayStatus(e.message || 'Could not connect to Firebase.');
       }
-    }
+    } catch(e) { console.log("Offline mode active"); }
 
-    function randomRoom() { return Math.random().toString(36).slice(2, 7).toUpperCase(); }
+    // State Variables
+    window.player = { name: '', country: '', age: '', iq: 20, id: 'user_' + Math.random().toString(36).substring(2, 7) };
+    window.game = new Chess();
+    window.selectedSquare = null;
+    window.currentOpponent = { name: 'hadibautdi', iq: 999, isAi: true };
+    window.liveOnlinePlayers = [];
 
-    async function createRoom() {
-      if (!user) return;
-      if (!playerName()) {
-        sayStatus('Enter your player name first.');
-        $('playerName').focus();
-        return;
-      }
-      await ensureProfile();
-      let id = randomRoom(), minutes = Number($('timeChoice').value) || 10;
-      let initial = {
-        whiteUid: user.uid, whiteName: playerName(), whiteAvatar: chosenAvatar(),
-        blackUid: null, blackName: null, blackAvatar: null,
-        fen: new Chess().fen(), history: [], timeLimitMs: minutes * 60 * 1000,
-        startedAt: null, createdAt: Date.now()
-      };
-      try {
-        await set(ref(db, 'rooms/' + id), initial);
-        await enterRoom(id, 'white');
-      } catch (e) {
-        sayStatus('Could not create room: ' + e.message);
-      }
-    }
-
-    async function joinRoom(id) {
-      if (!user) return;
-      if (!playerName()) {
-        sayStatus('Enter your player name first.');
-        $('playerName').focus();
-        return;
-      }
-      id = String(id).trim().toUpperCase();
-      if (!id) { sayStatus('Enter a room code.'); return; }
-
-      try {
-        let rr = ref(db, 'rooms/' + id), snap = await get(rr);
-        if (!snap.exists()) { sayStatus('Room not found. Check the code.'); return; }
-
-        let data = snap.val();
-        if (data.whiteUid === user.uid) { await enterRoom(id, 'white'); return; }
-        if (data.blackUid && data.blackUid !== user.uid) { sayStatus('This room already has two players.'); return; }
-
-        if (!data.blackUid) {
-          await runTransaction(rr, current => {
-            if (!current || current.blackUid) return;
-            current.blackUid = user.uid;
-            current.blackName = playerName();
-            current.blackAvatar = chosenAvatar();
-            return current;
-          });
-        }
-
-        let fresh = (await get(rr)).val();
-        if (fresh.blackUid !== user.uid) { sayStatus('Room is full.'); return; }
-        await enterRoom(id, 'black');
-      } catch (e) {
-        sayStatus('Could not join: ' + e.message);
-      }
-    }
-
-    async function enterRoom(id, color) {
-      await ensureProfile();
-      if (unsubRoom) unsubRoom();
-      if (unsubChat) unsubChat();
-
-      roomId = id;
-      seat = color;
-      history.replaceState(null, '', location.pathname + '?room=' + id);
-
-      $('roomBadge').textContent = 'Room: ' + id;
-      $('roleBadge').textContent = 'Seat: ' + (color === 'white' ? 'White' : 'Black') + ' · ' + chosenAvatar() + ' ' + playerName();$('copyBtn').disabled = false;
-      $('roomInput').value = id;
-      $('chatInput').disabled = false;
-      $('sendBtn').disabled = false;
-
-      unsubRoom = onValue(ref(db, 'rooms/' + id), snap => {
-        if (!snap.exists()) { sayStatus('Room was deleted.'); return; }
-        const previous = roomData;
-        roomData = snap.val();
-
-        if (roomData.whiteUid && roomData.blackUid && !roomData.startedAt) {
-          update(ref(db, 'rooms/' + id), { startedAt: Date.now() });
-        }
-
-        try { game.load(roomData.fen || new Chess().fen()); }
-        catch (e) { game = new Chess(); }
-
-        if (previous && roomData.lastMoveBy && roomData.lastMoveBy !== user.uid && ((roomData.history || []).length > (previous.history || []).length)) {
-          if (game.isCheckmate()) tone('mate');
-          else if (game.isCheck()) tone('check');
-          else tone('move');
-        }
-
-        selected = null;
-        legalTargets = [];
-        render();
-        $('turnHint').textContent = roomData.blackUid ? 'Both seats are connected.' : 'Waiting for your friend to join…';
-      });
-
-      unsubChat = onValue(ref(db, 'rooms/' + id + '/chat'), snap => {
-        let items = [];
-        snap.forEach(ch => items.push(ch.val()));
-        $('chatlog').innerHTML = '';
-        items.slice(-70).forEach(m => {
-          let div = document.createElement('div');
-          div.className = 'chatline';
-          let b = document.createElement('b');
-          b.textContent = (m.avatar || '👤') + ' ' + (m.name || 'Player') + ': ';
-          let span = document.createElement('span');
-          span.textContent = m.text || '';
-          div.append(b, span);
-          $('chatlog').appendChild(div);
-        });
-        $('chatlog').scrollTop =$('chatlog').scrollHeight;
-      });
-
-      sayStatus('Room ready. ' + (color === 'white' ? 'You are White.' : 'You are Black.'));
-    }
-
-    async function sendChat(e) {
-      e.preventDefault();
-      let text = $('chatInput').value.trim();
-      if (!text || !roomId || !user) return;
-      try {
-        await push(ref(db, 'rooms/' + roomId + '/chat'), {
-          uid: user.uid,
-          name: seatName(seat),
-          avatar: roomData?.[seat + 'Avatar'] || chosenAvatar(),
-          text: text.slice(0, 240),
-          at: Date.now()
-        });
-        $('chatInput').value = '';
-      } catch (e) {
-        sayStatus('Chat failed: ' + e.message);
-      }
-    }
-
-    $('createBtn').onclick = createRoom;
-    $('joinBtn').onclick = () => joinRoom($('roomInput').value);$('copyBtn').onclick = async () => {
-      let link = location.origin + location.pathname + '?room=' + roomId;
-      try {
-        await navigator.clipboard.writeText(link);
-        sayStatus('Invite link copied! Send it to your friend.');
-      } catch (e) {
-        prompt('Copy this invite link:', link);
-      }
-    };
-    $('chatForm').onsubmit = sendChat;
-    $('flipBtn').onclick = () => { flipped = !flipped; render(); };
-    $('newGameBtn').onclick = async () => { if (!roomId \vert{}\vert{} roomData?.[seat + 'Uid'] !== user?.uid) return; let fresh = new Chess(); await update(ref(db, 'rooms/' + roomId), { fen: fresh.fen(), history: [], lastMove: null, startedAt: Date.now(), resultApplied: false, result: null, updatedAt: Date.now() }); };$('searchBtn').onclick = () => subscribeLeaderboard();
-    $('playerSearch').addEventListener('input', () => subscribeLeaderboard());$('undoBtn').onclick = async () => {
-      if (!roomId || roomData?.[seat + 'Uid'] !== user?.uid) return;
-      let temp = new Chess(game.fen());
-      temp.undo();
-      await update(ref(db, 'rooms/' + roomId), {
-        fen: temp.fen(),
-        history: temp.history(),
-        updatedAt: Date.now()
-      });
+    const symbols = {
+      p: '♟', r: '♜', n: '♞', b: '♝', q: '♛', k: '♚',
+      P: '♙', R: '♖', N: '♘', B: '♗', Q: '♕', K: '♔'
     };
 
-    render();
-    start().then(() => {
+    window.switchScreen = function(screenId) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(screenId).classList.add('active');
+    };
+
+    window.goBack = function() {
+      if (myUserRef && db) {
+        remove(myUserRef);
+      }
+      switchScreen('screenProfile');
+    };
+
+    window.saveProfile = function() {
+      const nameInput = document.getElementById('profName').value.trim();
+      if (!nameInput) {
+        alert("Please enter your name!");
+        return;
+      }
+
+      const skill = document.getElementById('profSkill').value;
+      let startIq = 20;
+      if (skill === 'first') startIq = 30;
+      if (skill === 'medium') startIq = 25;
+      if (skill === 'expert') startIq = 20;
+
+      window.player.name = nameInput;
+      window.player.iq = startIq;
+
+      // Register Online with Firebase
       if (db) {
-        subscribeLeaderboard();
-        clockTick = setInterval(updateClock, 1000);
+        myUserRef = ref(db, 'online_players/' + window.player.id);
+        set(myUserRef, {
+          name: window.player.name,
+          iq: window.player.iq
+        });
+        onDisconnect(myUserRef).remove();
       }
-    });
+
+      renderLobby();
+      listenToOnlinePlayers();
+      switchScreen('screenLobby');
+    };
+
+    function listenToOnlinePlayers() {
+      if (!db) return;
+      const playersRef = ref(db, 'online_players');
+      onValue(playersRef, (snapshot) => {
+        const data = snapshot.val() || {};
+        window.liveOnlinePlayers = [];
+        for (let id in data) {
+          if (id !== window.player.id) {
+            window.liveOnlinePlayers.push({ id, ...data[id] });
+          }
+        }
+        renderLobby();
+      });
+    }
+
+    window.renderLobby = function() {
+      // Render Mini Board
+      const mini = document.getElementById('miniBoard');
+      mini.innerHTML = '';
+      for (let i = 0; i < 64; i++) {
+        const sq = document.createElement('div');
+        const r = Math.floor(i / 8), c = i % 8;
+        sq.className = 'mini-sq ' + ((r + c) % 2 ? 'dark' : 'light');
+        mini.appendChild(sq);
+      }
+
+      // Render Numbered Player List (1, 2, 3...)
+      const list = document.getElementById('onlineList');
+      list.innerHTML = '';
+      let count = 1;
+
+      // 1. Pro GM Hadibautdi
+      const aiItem = document.createElement('div');
+      aiItem.className = 'player-item';
+      aiItem.innerHTML = `<div><span class="player-num">${count++}.</span><b>hadibautdi</b> <span class="badge-gm">PRO GM</span></div> <span style="color:var(--accent-yellow)">IQ 999</span>`;
+      aiItem.onclick = () => openChallenge('hadibautdi', 999, true);
+      list.appendChild(aiItem);
+
+      // 2. Real Friends Online (Numbered 2, 3, 4...)
+      window.liveOnlinePlayers.forEach(p => {
+        const item = document.createElement('div');
+        item.className = 'player-item';
+        item.innerHTML = `<div><span class="player-num">${count++}.</span><b>${p.name}</b> <span style="color:var(--accent-green); font-size:12px;">● Online</span></div> <span style="color:var(--accent-green)">IQ ${p.iq}</span>`;
+        item.onclick = () => openChallenge(p.name, p.iq, false);
+        list.appendChild(item);
+      });
+    };
+
+    function openChallenge(name, iq, isAi) {
+      window.currentOpponent = { name, iq, isAi };
+      document.getElementById('oppNameDisplay').innerText = name;
+      document.getElementById('oppIqDisplay').innerText = iq;
+      switchScreen('screenChallenge');
+    }
+
+    window.startMatching = function() {
+      openChallenge('hadibautdi', 999, true);
+    };
+
+    window.launchGame = function() {
+      window.game.reset();
+      window.selectedSquare = null;
+      renderBoard();
+      switchScreen('screenGame');
+      addChatMessage(`System: Match started against ${window.currentOpponent.name}! 🔥`);
+    };
+
+    function renderBoard() {
+      const boardEl = document.getElementById('mainBoard');
+      boardEl.innerHTML = '';
+      const boardState = window.game.board();
+      const files = 'abcdefgh';
+
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const sqName = files[c] + (8 - r);
+          const piece = boardState[r][c];
+
+          const sq = document.createElement('div');
+          sq.className = 'sq ' + ((r + c) % 2 ? 'dark' : 'light');
+
+          if (window.selectedSquare === sqName) sq.classList.add('selected');
+
+          if (window.selectedSquare) {
+            const moves = window.game.moves({ square: window.selectedSquare, verbose: true });
+            if (moves.some(m => m.to === sqName)) sq.classList.add('target');
+          }
+
+          if (piece) {
+            const pieceSpan = document.createElement('span');
+            pieceSpan.className = 'piece ' + (piece.color === 'w' ? 'white' : 'black');
+            const pieceKey = piece.color === 'w' ? piece.type.toUpperCase() : piece.type;
+            pieceSpan.textContent = symbols[pieceKey];
+            sq.appendChild(pieceSpan);
+          }
+
+          sq.onclick = () => handleSquareClick(sqName);
+          boardEl.appendChild(sq);
+        }
+      }
+
+      document.getElementById('turnStatus').innerText = window.game.turn() === 'w' ? 'White turn' : 'Black turn';
+
+      if (window.game.in_checkmate()) {
+        if (window.game.turn() === 'b') {
+          window.player.iq += 50;
+          switchScreen('screenWin');
+        } else {
+          window.player.iq = Math.max(0, window.player.iq - 5);
+          switchScreen('screenLose');
+        }
+      }
+    }
+
+    function handleSquareClick(sqName) {
+      if (window.selectedSquare) {
+        const move = window.game.move({ from: window.selectedSquare, to: sqName, promotion: 'q' });
+        if (move) {
+          window.selectedSquare = null;
+          renderBoard();
+
+          if (window.currentOpponent.isAi && !window.game.game_over()) {
+            setTimeout(makeProAiMove, 500);
+          }
+          return;
+        }
+      }
+
+      const piece = window.game.get(sqName);
+      if (piece && piece.color === window.game.turn()) {
+        window.selectedSquare = sqName;
+      } else {
+        window.selectedSquare = null;
+      }
+      renderBoard();
+    }
+
+    function makeProAiMove() {
+      const possibleMoves = window.game.moves();
+      if (possibleMoves.length === 0) return;
+
+      let selectedMove = possibleMoves.find(m => m.includes('x')) || possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+      window.game.move(selectedMove);
+      renderBoard();
+    }
+
+    window.undoMove = function() {
+      window.game.undo();
+      if (window.currentOpponent.isAi) window.game.undo();
+      window.selectedSquare = null;
+      renderBoard();
+    };
+
+    window.resignGame = function() {
+      if (confirm("Are you sure you want to give up? You will lose 5 IQ.")) {
+        window.player.iq = Math.max(0, window.player.iq - 5);
+        switchScreen('screenLose');
+      }
+    };
+
+    window.sendText = function() {
+      const input = document.getElementById('chatInput');
+      const text = input.value.trim();
+      if (text) {
+        addChatMessage(`${window.player.name}: ${text}`);
+        input.value = '';
+      }
+    };
+
+    function addChatMessage(msg) {
+      const box = document.getElementById('chatMessages');
+      const div = document.createElement('div');
+      div.textContent = msg;
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+    }
   </script>
 </body>
 </html>
