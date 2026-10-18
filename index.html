@@ -427,18 +427,18 @@
           <input type="number" id="profAge" placeholder="Age" style="width: 80px;">
         </div>
         <select id="profSkill">
-          <option value="first">1) First time (+30 IQ)</option>
-          <option value="medium">2) Medium (+25 IQ)</option>
-          <option value="expert">3) Expert (+20 IQ)</option>
+          <option value="first">1) First time (+300 IQ)</option>
+          <option value="medium">2) Medium (+250 IQ)</option>
+          <option value="expert">3) Expert (+200 IQ)</option>
         </select>
         <button class="save-btn" onclick="saveProfile()">SAVE</button>
       </div>
 
       <div class="option-list">
         OPTION:<br>
-        1) First time ➔ 30 IQ<br>
-        2) Medium ➔ 25 IQ<br>
-        3) Expert ➔ 20 IQ
+        1) First time ➔ 300 IQ<br>
+        2) Medium ➔ 250 IQ<br>
+        3) Expert ➔ 200 IQ
       </div>
     </div>
 
@@ -492,7 +492,7 @@
     <div class="screen" id="screenWin">
       <div class="result-card win">
         <h2>YOU WIN</h2>
-        <p style="margin-top:8px;">IQ +50</p>
+        <p style="margin-top:8px;">IQ +100</p>
         <button class="save-btn" style="margin-top: 16px;" onclick="switchScreen('screenLobby')">CONTINUE</button>
       </div>
     </div>
@@ -510,31 +510,53 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-    import { getDatabase, ref, set, onValue, onDisconnect, remove } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
+    import { getDatabase, ref, set, push, onValue, onDisconnect, remove } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
 
-    // 🌐 Firebase Database URL Configured Live
     const firebaseConfig = {
       databaseURL: "https://sekato-chess-default-rtdb.firebaseio.com/"
     };
 
     let db = null;
     let myUserRef = null;
+    let matchRef = null;
+    let chatRef = null;
 
     try {
       const app = initializeApp(firebaseConfig);
       db = getDatabase(app);
     } catch(e) { console.log("Offline mode active"); }
 
-    window.player = { name: '', country: '', age: '', iq: 20, id: 'user_' + Math.random().toString(36).substring(2, 7) };
+    const savedId = localStorage.getItem('sekato_id') || 'user_' + Math.random().toString(36).substring(2, 7);
+    localStorage.setItem('sekato_id', savedId);
+
+    window.player = {
+      name: localStorage.getItem('sekato_name') || '',
+      country: localStorage.getItem('sekato_country') || '',
+      age: localStorage.getItem('sekato_age') || '',
+      iq: parseInt(localStorage.getItem('sekato_iq')) || 300,
+      id: savedId
+    };
+
     window.game = new Chess();
     window.selectedSquare = null;
-    window.currentOpponent = { name: 'hadibautdi', iq: 999, isAi: true };
+    window.currentOpponent = { name: 'hadibautdi', iq: 999, isAi: true, id: null };
     window.liveOnlinePlayers = [];
+    window.myColor = 'w';
 
     const symbols = {
       p: '♟', r: '♜', n: '♞', b: '♝', q: '♛', k: '♚',
       P: '♙', R: '♖', N: '♘', B: '♗', Q: '♕', K: '♔'
     };
+
+    // Restore saved profile automatically
+    window.addEventListener('load', () => {
+      if (window.player.name) {
+        document.getElementById('profName').value = window.player.name;
+        document.getElementById('profCountry').value = window.player.country;
+        document.getElementById('profAge').value = window.player.age;
+        saveProfile(true);
+      }
+    });
 
     window.switchScreen = function(screenId) {
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -542,27 +564,33 @@
     };
 
     window.goBack = function() {
-      if (myUserRef && db) {
-        remove(myUserRef);
-      }
       switchScreen('screenProfile');
     };
 
-    window.saveProfile = function() {
+    window.saveProfile = function(isAuto = false) {
       const nameInput = document.getElementById('profName').value.trim();
       if (!nameInput) {
         alert("Please enter your name!");
         return;
       }
 
-      const skill = document.getElementById('profSkill').value;
-      let startIq = 20;
-      if (skill === 'first') startIq = 30;
-      if (skill === 'medium') startIq = 25;
-      if (skill === 'expert') startIq = 20;
+      if (!isAuto) {
+        const skill = document.getElementById('profSkill').value;
+        let startIq = 300;
+        if (skill === 'first') startIq = 300;
+        if (skill === 'medium') startIq = 250;
+        if (skill === 'expert') startIq = 200;
 
-      window.player.name = nameInput;
-      window.player.iq = startIq;
+        window.player.name = nameInput;
+        window.player.country = document.getElementById('profCountry').value;
+        window.player.age = document.getElementById('profAge').value;
+        window.player.iq = startIq;
+
+        localStorage.setItem('sekato_name', window.player.name);
+        localStorage.setItem('sekato_country', window.player.country);
+        localStorage.setItem('sekato_age', window.player.age);
+        localStorage.setItem('sekato_iq', window.player.iq);
+      }
 
       if (db) {
         myUserRef = ref(db, 'online_players/' + window.player.id);
@@ -607,14 +635,12 @@
       list.innerHTML = '';
       let count = 1;
 
-      // 1. Pro GrandMaster hadibautdi always at #1
       const aiItem = document.createElement('div');
       aiItem.className = 'player-item';
       aiItem.innerHTML = `<div><span class="player-num">${count++}.</span><b>hadibautdi</b> <span class="badge-gm">PRO GM</span></div> <span style="color:var(--accent-yellow)">IQ 999</span>`;
-      aiItem.onclick = () => openChallenge('hadibautdi', 999, true);
+      aiItem.onclick = () => openChallenge('hadibautdi', 999, true, null);
       list.appendChild(aiItem);
 
-      // 2. You and your friends synchronized live
       if (window.player.name) {
         const selfItem = document.createElement('div');
         selfItem.className = 'player-item';
@@ -626,29 +652,73 @@
         const item = document.createElement('div');
         item.className = 'player-item';
         item.innerHTML = `<div><span class="player-num">${count++}.</span><b>${p.name}</b> <span style="color:var(--accent-green); font-size:11px;">● Online</span></div> <span style="color:var(--accent-green)">IQ ${p.iq}</span>`;
-        item.onclick = () => openChallenge(p.name, p.iq, false);
+        item.onclick = () => openChallenge(p.name, p.iq, false, p.id);
         list.appendChild(item);
       });
     };
 
-    function openChallenge(name, iq, isAi) {
-      window.currentOpponent = { name, iq, isAi };
+    function openChallenge(name, iq, isAi, targetId) {
+      window.currentOpponent = { name, iq, isAi, id: targetId };
       document.getElementById('oppNameDisplay').innerText = name;
       document.getElementById('oppIqDisplay').innerText = iq;
       switchScreen('screenChallenge');
     }
 
     window.startMatching = function() {
-      openChallenge('hadibautdi', 999, true);
+      openChallenge('hadibautdi', 999, true, null);
     };
 
     window.launchGame = function() {
       window.game.reset();
       window.selectedSquare = null;
+      document.getElementById('chatMessages').innerHTML = '<div><i>Unlimited Chat & Emojis active 😊♟️🔥</i></div>';
+
+      if (!window.currentOpponent.isAi && db) {
+        const matchId = [window.player.id, window.currentOpponent.id].sort().join('_vs_');
+        matchRef = ref(db, 'matches/' + matchId + '/board');
+        chatRef = ref(db, 'matches/' + matchId + '/chat');
+
+        window.myColor = window.player.id < window.currentOpponent.id ? 'w' : 'b';
+
+        set(matchRef, {
+          fen: window.game.fen(),
+          lastMove: null
+        });
+
+        listenToMatchUpdates();
+        listenToChatUpdates();
+      }
+
       renderBoard();
       switchScreen('screenGame');
       addChatMessage(`System: Match started against ${window.currentOpponent.name}! 🔥`);
     };
+
+    function listenToMatchUpdates() {
+      if (!matchRef) return;
+      onValue(matchRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data && data.fen) {
+          window.game.load(data.fen);
+          renderBoard();
+        }
+      });
+    }
+
+    function listenToChatUpdates() {
+      if (!chatRef) return;
+      onValue(chatRef, (snapshot) => {
+        const data = snapshot.val();
+        const box = document.getElementById('chatMessages');
+        box.innerHTML = '<div><i>Unlimited Chat & Emojis active 😊♟️🔥</i></div>';
+        if (data) {
+          for (let key in data) {
+            const msgObj = data[key];
+            addChatMessage(`${msgObj.sender}: ${msgObj.text}`);
+          }
+        }
+      });
+    }
 
     function renderBoard() {
       const boardEl = document.getElementById('mainBoard');
@@ -687,22 +757,35 @@
       document.getElementById('turnStatus').innerText = window.game.turn() === 'w' ? 'White turn' : 'Black turn';
 
       if (window.game.in_checkmate()) {
-        if (window.game.turn() === 'b') {
-          window.player.iq += 50;
+        if (window.game.turn() !== window.myColor) {
+          window.player.iq += 100;
+          localStorage.setItem('sekato_iq', window.player.iq);
           switchScreen('screenWin');
         } else {
           window.player.iq = Math.max(0, window.player.iq - 5);
+          localStorage.setItem('sekato_iq', window.player.iq);
           switchScreen('screenLose');
         }
       }
     }
 
     function handleSquareClick(sqName) {
+      if (!window.currentOpponent.isAi && window.game.turn() !== window.myColor) {
+        return;
+      }
+
       if (window.selectedSquare) {
         const move = window.game.move({ from: window.selectedSquare, to: sqName, promotion: 'q' });
         if (move) {
           window.selectedSquare = null;
           renderBoard();
+
+          if (!window.currentOpponent.isAi && matchRef) {
+            set(matchRef, {
+              fen: window.game.fen(),
+              lastMove: move
+            });
+          }
 
           if (window.currentOpponent.isAi && !window.game.game_over()) {
             setTimeout(makeProAiMove, 400);
@@ -739,6 +822,7 @@
     window.resignGame = function() {
       if (confirm("Are you sure you want to give up? You will lose 5 IQ.")) {
         window.player.iq = Math.max(0, window.player.iq - 5);
+        localStorage.setItem('sekato_iq', window.player.iq);
         switchScreen('screenLose');
       }
     };
@@ -747,7 +831,14 @@
       const input = document.getElementById('chatInput');
       const text = input.value.trim();
       if (text) {
-        addChatMessage(`${window.player.name}: ${text}`);
+        if (!window.currentOpponent.isAi && chatRef) {
+          push(chatRef, {
+            sender: window.player.name,
+            text: text
+          });
+        } else {
+          addChatMessage(`${window.player.name}: ${text}`);
+        }
         input.value = '';
       }
     };
