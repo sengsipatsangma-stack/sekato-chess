@@ -157,6 +157,18 @@
       text-align: center;
     }
 
+    .decline-btn {
+      background: var(--danger-red);
+      color: #fff;
+      font-size: 16px;
+      font-weight: bold;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: center;
+    }
+
     .option-list {
       margin-top: 15px;
       font-size: 13px;
@@ -239,7 +251,7 @@
       margin-left: 6px;
     }
 
-    /* Challenge Modal */
+    /* Modals & Popups */
     .challenge-card {
       background: var(--card-bg);
       border: 2px solid var(--accent-green);
@@ -253,6 +265,21 @@
       color: var(--accent-green);
       font-size: 24px;
       margin-bottom: 8px;
+    }
+
+    .modal-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.85);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      z-index: 100;
+    }
+
+    .modal-overlay.active {
+      display: flex;
     }
 
     /* Smooth Chess Board */
@@ -412,6 +439,18 @@
       <div class="header-title" id="headerTitle">SEKATO CHESS</div>
     </div>
 
+    <!-- Incoming Invitation Modal -->
+    <div class="modal-overlay" id="inviteModal">
+      <div class="challenge-card" style="width: 100%;">
+        <h2 style="color: var(--accent-yellow);">CHALLENGE!</h2>
+        <p style="margin: 12px 0;" id="inviteText">Player is challenging you!</p>
+        <div style="display: flex; gap: 10px; margin-top: 15px;">
+          <button class="save-btn" style="flex:1;" onclick="acceptInvite()">ACCEPT</button>
+          <button class="decline-btn" style="flex:1;" onclick="declineInvite()">DECLINE</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Screen 1: Registration -->
     <div class="screen active" id="screenProfile">
       <div class="title-banner">
@@ -461,7 +500,7 @@
       <div class="challenge-card">
         <h2 id="oppNameDisplay">hadibautdi</h2>
         <p style="margin-bottom:15px; color:var(--text-muted);">IQ: <span id="oppIqDisplay">999</span></p>
-        <button class="challenge-btn" onclick="launchGame()">CHALLENGE</button>
+        <button class="challenge-btn" onclick="sendChallenge()">CHALLENGE</button>
       </div>
     </div>
 
@@ -520,6 +559,7 @@
     let myUserRef = null;
     let matchRef = null;
     let chatRef = null;
+    let activeInviteData = null;
 
     try {
       const app = initializeApp(firebaseConfig);
@@ -548,7 +588,6 @@
       P: '♙', R: '♖', N: '♘', B: '♗', Q: '♕', K: '♔'
     };
 
-    // Restore saved profile automatically
     window.addEventListener('load', () => {
       if (window.player.name) {
         document.getElementById('profName').value = window.player.name;
@@ -599,6 +638,7 @@
           iq: window.player.iq
         });
         onDisconnect(myUserRef).remove();
+        listenToInvitations();
       }
 
       renderLobby();
@@ -620,6 +660,59 @@
         renderLobby();
       });
     }
+
+    function listenToInvitations() {
+      if (!db) return;
+      const inviteRef = ref(db, 'invites/' + window.player.id);
+      onValue(inviteRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data && data.status === 'pending') {
+          activeInviteData = data;
+          document.getElementById('inviteText').innerText = `${data.fromName} (IQ ${data.fromIq}) challenged you to a game!`;
+          document.getElementById('inviteModal').classList.add('active');
+        } else if (data && data.status === 'accepted') {
+          window.currentOpponent = { name: data.toName || 'Friend', iq: 300, isAi: false, id: data.toId };
+          window.myColor = data.hostColor;
+          launchMatchSession(data.matchId);
+          remove(inviteRef);
+        } else if (data && data.status === 'declined') {
+          alert("Your challenge was declined.");
+          remove(inviteRef);
+        }
+      });
+    }
+
+    window.acceptInvite = function() {
+      document.getElementById('inviteModal').classList.remove('active');
+      if (!activeInviteData) return;
+
+      const hostColor = Math.random() < 0.5 ? 'w' : 'b';
+      const guestColor = hostColor === 'w' ? 'b' : 'w';
+
+      window.currentOpponent = { name: activeInviteData.fromName, iq: activeInviteData.fromIq, isAi: false, id: activeInviteData.fromId };
+      window.myColor = guestColor;
+
+      const matchId = activeInviteData.matchId;
+
+      set(ref(db, 'invites/' + activeInviteData.fromId), {
+        status: 'accepted',
+        matchId: matchId,
+        hostColor: hostColor,
+        toId: window.player.id,
+        toName: window.player.name
+      });
+
+      remove(ref(db, 'invites/' + window.player.id));
+      launchMatchSession(matchId);
+    };
+
+    window.declineInvite = function() {
+      document.getElementById('inviteModal').classList.remove('active');
+      if (activeInviteData) {
+        set(ref(db, 'invites/' + activeInviteData.fromId), { status: 'declined' });
+        remove(ref(db, 'invites/' + window.player.id));
+      }
+    };
 
     window.renderLobby = function() {
       const mini = document.getElementById('miniBoard');
@@ -668,22 +761,38 @@
       openChallenge('hadibautdi', 999, true, null);
     };
 
-    window.launchGame = function() {
+    window.sendChallenge = function() {
+      if (window.currentOpponent.isAi) {
+        window.myColor = Math.random() < 0.5 ? 'w' : 'b';
+        launchMatchSession('ai_' + Date.now());
+      } else if (db) {
+        const matchId = [window.player.id, window.currentOpponent.id].sort().join('_vs_');
+        set(ref(db, 'invites/' + window.currentOpponent.id), {
+          fromId: window.player.id,
+          fromName: window.player.name,
+          fromIq: window.player.iq,
+          matchId: matchId,
+          status: 'pending'
+        });
+        alert(`Challenge sent to ${window.currentOpponent.name}! Waiting for them to accept...`);
+      }
+    };
+
+    function launchMatchSession(matchId) {
       window.game.reset();
       window.selectedSquare = null;
       document.getElementById('chatMessages').innerHTML = '<div><i>Unlimited Chat & Emojis active 😊♟️🔥</i></div>';
 
       if (!window.currentOpponent.isAi && db) {
-        const matchId = [window.player.id, window.currentOpponent.id].sort().join('_vs_');
         matchRef = ref(db, 'matches/' + matchId + '/board');
         chatRef = ref(db, 'matches/' + matchId + '/chat');
 
-        window.myColor = window.player.id < window.currentOpponent.id ? 'w' : 'b';
-
-        set(matchRef, {
-          fen: window.game.fen(),
-          lastMove: null
-        });
+        if (window.myColor === 'w') {
+          set(matchRef, {
+            fen: window.game.fen(),
+            lastMove: null
+          });
+        }
 
         listenToMatchUpdates();
         listenToChatUpdates();
@@ -691,8 +800,12 @@
 
       renderBoard();
       switchScreen('screenGame');
-      addChatMessage(`System: Match started against ${window.currentOpponent.name}! 🔥`);
-    };
+      addChatMessage(`System: Match started! You play as ${window.myColor === 'w' ? 'WHITE ♔ (Moves First)' : 'BLACK ♚ (Moves Second)'}. 🔥`);
+
+      if (window.currentOpponent.isAi && window.myColor === 'b') {
+        setTimeout(makeProAiMove, 500);
+      }
+    }
 
     function listenToMatchUpdates() {
       if (!matchRef) return;
@@ -726,32 +839,38 @@
       const boardState = window.game.board();
       const files = 'abcdefgh';
 
-      for (let r = 0; r < 8; r++) {
-        for (let c = 0; c < 8; c++) {
-          const sqName = files[c] + (8 - r);
-          const piece = boardState[r][c];
+      for (let i = 0; i < 64; i++) {
+        let r = Math.floor(i / 8);
+        let c = i % 8;
 
-          const sq = document.createElement('div');
-          sq.className = 'sq ' + ((r + c) % 2 ? 'dark' : 'light');
-
-          if (window.selectedSquare === sqName) sq.classList.add('selected');
-
-          if (window.selectedSquare) {
-            const moves = window.game.moves({ square: window.selectedSquare, verbose: true });
-            if (moves.some(m => m.to === sqName)) sq.classList.add('target');
-          }
-
-          if (piece) {
-            const pieceSpan = document.createElement('span');
-            pieceSpan.className = 'piece ' + (piece.color === 'w' ? 'white' : 'black');
-            const pieceKey = piece.color === 'w' ? piece.type.toUpperCase() : piece.type;
-            pieceSpan.textContent = symbols[pieceKey];
-            sq.appendChild(pieceSpan);
-          }
-
-          sq.onclick = () => handleSquareClick(sqName);
-          boardEl.appendChild(sq);
+        if (window.myColor === 'b') {
+          r = 7 - r;
+          c = 7 - c;
         }
+
+        const sqName = files[c] + (8 - r);
+        const piece = boardState[r][c];
+
+        const sq = document.createElement('div');
+        sq.className = 'sq ' + ((r + c) % 2 ? 'dark' : 'light');
+
+        if (window.selectedSquare === sqName) sq.classList.add('selected');
+
+        if (window.selectedSquare) {
+          const moves = window.game.moves({ square: window.selectedSquare, verbose: true });
+          if (moves.some(m => m.to === sqName)) sq.classList.add('target');
+        }
+
+        if (piece) {
+          const pieceSpan = document.createElement('span');
+          pieceSpan.className = 'piece ' + (piece.color === 'w' ? 'white' : 'black');
+          const pieceKey = piece.color === 'w' ? piece.type.toUpperCase() : piece.type;
+          pieceSpan.textContent = symbols[pieceKey];
+          sq.appendChild(pieceSpan);
+        }
+
+        sq.onclick = () => handleSquareClick(sqName);
+        boardEl.appendChild(sq);
       }
 
       document.getElementById('turnStatus').innerText = window.game.turn() === 'w' ? 'White turn' : 'Black turn';
@@ -770,7 +889,7 @@
     }
 
     function handleSquareClick(sqName) {
-      if (!window.currentOpponent.isAi && window.game.turn() !== window.myColor) {
+      if (window.game.turn() !== window.myColor) {
         return;
       }
 
