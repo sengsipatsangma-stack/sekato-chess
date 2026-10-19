@@ -102,7 +102,6 @@
       overflow: hidden;
     }
 
-    /* Registration Screen */
     .title-banner {
       text-align: center;
       margin-bottom: 20px;
@@ -145,6 +144,11 @@
       outline: none;
     }
 
+    input:disabled, select:disabled {
+      opacity: 0.6;
+      border-color: #555;
+    }
+
     .save-btn, .challenge-btn, .start-btn {
       background: var(--accent-green);
       color: #111;
@@ -176,7 +180,7 @@
       line-height: 1.8;
     }
 
-    /* Lobby Screen */
+    /* Lobby */
     .mini-board-preview {
       width: 100%;
       aspect-ratio: 1;
@@ -251,7 +255,20 @@
       margin-left: 6px;
     }
 
-    /* Modals & Popups */
+    .badge-easy {
+      background: #3498db;
+      color: #fff;
+      font-size: 10px;
+      font-weight: bold;
+      padding: 2px 5px;
+      border-radius: 4px;
+      margin-left: 6px;
+    }
+
+    .status-online { color: var(--accent-green); font-size: 11px; }
+    .status-offline { color: var(--text-muted); font-size: 11px; }
+
+    /* Modals */
     .challenge-card {
       background: var(--card-bg);
       border: 2px solid var(--accent-green);
@@ -282,7 +299,7 @@
       display: flex;
     }
 
-    /* Smooth Chess Board */
+    /* Board */
     .chess-board-wrapper {
       width: 100%;
       display: flex;
@@ -343,6 +360,16 @@
       height: 48px;
       min-height: 48px;
       flex-shrink: 0;
+    }
+
+    .timer-display {
+      font-weight: bold;
+      color: var(--accent-yellow);
+      font-size: 14px;
+      background: #111;
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--accent-green);
     }
 
     .round-btn {
@@ -443,7 +470,8 @@
     <div class="modal-overlay" id="inviteModal">
       <div class="challenge-card" style="width: 100%;">
         <h2 style="color: var(--accent-yellow);">CHALLENGE!</h2>
-        <p style="margin: 12px 0;" id="inviteText">Player is challenging you!</p>
+        <p style="margin: 8px 0;" id="inviteText">Player is challenging you!</p>
+        <p style="margin-bottom: 12px; color: var(--accent-green); font-weight: bold;" id="inviteTimerText">Time: 10 mins</p>
         <div style="display: flex; gap: 10px; margin-top: 15px;">
           <button class="save-btn" style="flex:1;" onclick="acceptInvite()">ACCEPT</button>
           <button class="decline-btn" style="flex:1;" onclick="declineInvite()">DECLINE</button>
@@ -470,7 +498,7 @@
           <option value="medium">2) Medium (+250 IQ)</option>
           <option value="expert">3) Expert (+200 IQ)</option>
         </select>
-        <button class="save-btn" onclick="saveProfile()">SAVE</button>
+        <button class="save-btn" id="saveProfileBtn" onclick="saveProfile()">SAVE</button>
       </div>
 
       <div class="option-list">
@@ -489,9 +517,7 @@
 
       <div class="online-section">
         <h3>ONLINE PLAYERS LIST</h3>
-        <div class="player-list" id="onlineList">
-          <!-- Synchronized Numbered List -->
-        </div>
+        <div class="player-list" id="onlineList"></div>
       </div>
     </div>
 
@@ -499,20 +525,35 @@
     <div class="screen" id="screenChallenge">
       <div class="challenge-card">
         <h2 id="oppNameDisplay">hadibautdi</h2>
-        <p style="margin-bottom:15px; color:var(--text-muted);">IQ: <span id="oppIqDisplay">999</span></p>
+        <p style="margin-bottom:10px; color:var(--text-muted);">IQ: <span id="oppIqDisplay">999</span></p>
+
+        <div style="margin-bottom: 15px; text-align: left;">
+          <label style="font-size: 13px; color: var(--accent-green); font-weight: bold; display: block; margin-bottom: 5px;">SELECT TIME LIMIT:</label>
+          <select id="timeSelect">
+            <option value="7">7 Minutes</option>
+            <option value="10" selected>10 Minutes</option>
+            <option value="20">20 Minutes</option>
+          </select>
+        </div>
+
         <button class="challenge-btn" onclick="sendChallenge()">CHALLENGE</button>
       </div>
     </div>
 
     <!-- Screen 4: Chess Board Screen -->
     <div class="screen" id="screenGame">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <span class="timer-display" id="oppTimerDisplay">Opponent: 10:00</span>
+        <span class="timer-display" id="myTimerDisplay">You: 10:00</span>
+      </div>
+
       <div class="chess-board-wrapper">
         <div class="chess-board" id="mainBoard"></div>
       </div>
 
       <div class="game-controls">
         <button class="round-btn" title="Undo Move" onclick="undoMove()">⟶</button>
-        <span id="turnStatus" style="font-weight: bold; color: var(--accent-yellow); font-size:15px;">White turn</span>
+        <span id="turnStatus" style="font-weight: bold; color: var(--accent-yellow); font-size:14px;">White turn</span>
         <button class="round-btn giveup-btn" title="Resign / Give Up" onclick="resignGame()">🏳</button>
       </div>
 
@@ -561,6 +602,10 @@
     let chatRef = null;
     let activeInviteData = null;
 
+    let myTimeRemaining = 600;
+    let oppTimeRemaining = 600;
+    let timerInterval = null;
+
     try {
       const app = initializeApp(firebaseConfig);
       db = getDatabase(app);
@@ -574,13 +619,14 @@
       country: localStorage.getItem('sekato_country') || '',
       age: localStorage.getItem('sekato_age') || '',
       iq: parseInt(localStorage.getItem('sekato_iq')) || 300,
-      id: savedId
+      id: savedId,
+      isLocked: localStorage.getItem('sekato_locked') === 'true'
     };
 
     window.game = new Chess();
     window.selectedSquare = null;
-    window.currentOpponent = { name: 'hadibautdi', iq: 999, isAi: true, id: null };
-    window.liveOnlinePlayers = [];
+    window.currentOpponent = { name: 'hadibautdi', iq: 999, isAi: true, aiLevel: 'hard', id: null };
+    window.liveOnlinePlayers = {};
     window.myColor = 'w';
 
     const symbols = {
@@ -588,14 +634,30 @@
       P: '♙', R: '♖', N: '♘', B: '♗', Q: '♕', K: '♔'
     };
 
+    const pieceValues = { p: 10, n: 30, b: 30, r: 50, q: 90, k: 900 };
+
     window.addEventListener('load', () => {
       if (window.player.name) {
         document.getElementById('profName').value = window.player.name;
         document.getElementById('profCountry').value = window.player.country;
         document.getElementById('profAge').value = window.player.age;
+
+        if (window.player.isLocked) {
+          lockProfileFields();
+        }
         saveProfile(true);
       }
     });
+
+    function lockProfileFields() {
+      document.getElementById('profName').disabled = true;
+      document.getElementById('profCountry').disabled = true;
+      document.getElementById('profAge').disabled = true;
+      document.getElementById('profSkill').disabled = true;
+      document.getElementById('saveProfileBtn').innerText = "LOCKED (LOGGED IN)";
+      document.getElementById('saveProfileBtn').style.background = "#555";
+      document.getElementById('saveProfileBtn').onclick = () => switchScreen('screenLobby');
+    }
 
     window.switchScreen = function(screenId) {
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -624,39 +686,42 @@
         window.player.country = document.getElementById('profCountry').value;
         window.player.age = document.getElementById('profAge').value;
         window.player.iq = startIq;
+        window.player.isLocked = true;
 
         localStorage.setItem('sekato_name', window.player.name);
         localStorage.setItem('sekato_country', window.player.country);
         localStorage.setItem('sekato_age', window.player.age);
         localStorage.setItem('sekato_iq', window.player.iq);
+        localStorage.setItem('sekato_locked', 'true');
+
+        lockProfileFields();
       }
 
       if (db) {
-        myUserRef = ref(db, 'online_players/' + window.player.id);
+        myUserRef = ref(db, 'registered_players/' + window.player.id);
         set(myUserRef, {
           name: window.player.name,
-          iq: window.player.iq
+          iq: window.player.iq,
+          online: true,
+          lastSeen: Date.now()
         });
-        onDisconnect(myUserRef).remove();
+
+        const statusRef = ref(db, 'registered_players/' + window.player.id + '/online');
+        onDisconnect(statusRef).set(false);
+
         listenToInvitations();
+        listenToAllPlayers();
       }
 
       renderLobby();
-      listenToOnlinePlayers();
       switchScreen('screenLobby');
     };
 
-    function listenToOnlinePlayers() {
+    function listenToAllPlayers() {
       if (!db) return;
-      const playersRef = ref(db, 'online_players');
+      const playersRef = ref(db, 'registered_players');
       onValue(playersRef, (snapshot) => {
-        const data = snapshot.val() || {};
-        window.liveOnlinePlayers = [];
-        for (let id in data) {
-          if (id !== window.player.id) {
-            window.liveOnlinePlayers.push({ id, ...data[id] });
-          }
-        }
+        window.liveOnlinePlayers = snapshot.val() || {};
         renderLobby();
       });
     }
@@ -668,12 +733,13 @@
         const data = snapshot.val();
         if (data && data.status === 'pending') {
           activeInviteData = data;
-          document.getElementById('inviteText').innerText = `${data.fromName} (IQ ${data.fromIq}) challenged you to a game!`;
+          document.getElementById('inviteText').innerText = `${data.fromName} (IQ ${data.fromIq}) challenged you!`;
+          document.getElementById('inviteTimerText').innerText = `Time Limit: ${data.timeLimit} Mins`;
           document.getElementById('inviteModal').classList.add('active');
         } else if (data && data.status === 'accepted') {
           window.currentOpponent = { name: data.toName || 'Friend', iq: 300, isAi: false, id: data.toId };
           window.myColor = data.hostColor;
-          launchMatchSession(data.matchId);
+          launchMatchSession(data.matchId, parseInt(data.timeLimit));
           remove(inviteRef);
         } else if (data && data.status === 'declined') {
           alert("Your challenge was declined.");
@@ -693,17 +759,19 @@
       window.myColor = guestColor;
 
       const matchId = activeInviteData.matchId;
+      const minutes = parseInt(activeInviteData.timeLimit) || 10;
 
       set(ref(db, 'invites/' + activeInviteData.fromId), {
         status: 'accepted',
         matchId: matchId,
         hostColor: hostColor,
+        timeLimit: minutes,
         toId: window.player.id,
         toName: window.player.name
       });
 
       remove(ref(db, 'invites/' + window.player.id));
-      launchMatchSession(matchId);
+      launchMatchSession(matchId, minutes);
     };
 
     window.declineInvite = function() {
@@ -728,43 +796,59 @@
       list.innerHTML = '';
       let count = 1;
 
-      const aiItem = document.createElement('div');
-      aiItem.className = 'player-item';
-      aiItem.innerHTML = `<div><span class="player-num">${count++}.</span><b>hadibautdi</b> <span class="badge-gm">PRO GM</span></div> <span style="color:var(--accent-yellow)">IQ 999</span>`;
-      aiItem.onclick = () => openChallenge('hadibautdi', 999, true, null);
-      list.appendChild(aiItem);
+      // 1. Pro GM hadibautdi (Super Hard)
+      const gmItem = document.createElement('div');
+      gmItem.className = 'player-item';
+      gmItem.innerHTML = `<div><span class="player-num">${count++}.</span><b>hadibautdi</b> <span class="badge-gm">PRO GM (HARD)</span></div> <span style="color:var(--accent-yellow)">IQ 999</span>`;
+      gmItem.onclick = () => openChallenge('hadibautdi', 999, true, 'hard', null);
+      list.appendChild(gmItem);
 
+      // 2. ong (Easy AI)
+      const easyItem = document.createElement('div');
+      easyItem.className = 'player-item';
+      easyItem.innerHTML = `<div><span class="player-num">${count++}.</span><b>ong</b> <span class="badge-easy">EASY AI</span></div> <span style="color:#3498db">IQ 50</span>`;
+      easyItem.onclick = () => openChallenge('ong', 50, true, 'easy', null);
+      list.appendChild(easyItem);
+
+      // 3. You
       if (window.player.name) {
         const selfItem = document.createElement('div');
         selfItem.className = 'player-item';
-        selfItem.innerHTML = `<div><span class="player-num">${count++}.</span><b>${window.player.name} (You)</b> <span style="color:var(--accent-green); font-size:11px;">● Online</span></div> <span style="color:var(--accent-green)">IQ ${window.player.iq}</span>`;
+        selfItem.innerHTML = `<div><span class="player-num">${count++}.</span><b>${window.player.name} (You)</b> <span class="status-online">● Online</span></div> <span style="color:var(--accent-green)">IQ ${window.player.iq}</span>`;
         list.appendChild(selfItem);
       }
 
-      window.liveOnlinePlayers.forEach(p => {
-        const item = document.createElement('div');
-        item.className = 'player-item';
-        item.innerHTML = `<div><span class="player-num">${count++}.</span><b>${p.name}</b> <span style="color:var(--accent-green); font-size:11px;">● Online</span></div> <span style="color:var(--accent-green)">IQ ${p.iq}</span>`;
-        item.onclick = () => openChallenge(p.name, p.iq, false, p.id);
-        list.appendChild(item);
-      });
+      // 4. Undisappearing Players (Online & Offline)
+      for (let id in window.liveOnlinePlayers) {
+        if (id !== window.player.id) {
+          const p = window.liveOnlinePlayers[id];
+          const item = document.createElement('div');
+          item.className = 'player-item';
+          const isOnline = p.online === true;
+          item.innerHTML = `<div><span class="player-num">${count++}.</span><b>${p.name}</b> <span class="${isOnline ? 'status-online' : 'status-offline'}">${isOnline ? '● Online' : '● Offline'}</span></div> <span style="color:var(--accent-green)">IQ ${p.iq}</span>`;
+          item.onclick = () => openChallenge(p.name, p.iq, false, 'friend', id);
+          list.appendChild(item);
+        }
+      }
     };
 
-    function openChallenge(name, iq, isAi, targetId) {
-      window.currentOpponent = { name, iq, isAi, id: targetId };
+    function openChallenge(name, iq, isAi, aiLevel, targetId) {
+      window.currentOpponent = { name, iq, isAi, aiLevel, id: targetId };
       document.getElementById('oppNameDisplay').innerText = name;
       document.getElementById('oppIqDisplay').innerText = iq;
       switchScreen('screenChallenge');
     }
 
     window.startMatching = function() {
-      openChallenge('hadibautdi', 999, true, null);
+      openChallenge('hadibautdi', 999, true, 'hard', null);
     };
 
     window.sendChallenge = function() {
+      const selectedMinutes = parseInt(document.getElementById('timeSelect').value) || 10;
+
       if (window.currentOpponent.isAi) {
         window.myColor = Math.random() < 0.5 ? 'w' : 'b';
-        launchMatchSession('ai_' + Date.now());
+        launchMatchSession('ai_' + Date.now(), selectedMinutes);
       } else if (db) {
         const matchId = [window.player.id, window.currentOpponent.id].sort().join('_vs_');
         set(ref(db, 'invites/' + window.currentOpponent.id), {
@@ -772,16 +856,21 @@
           fromName: window.player.name,
           fromIq: window.player.iq,
           matchId: matchId,
+          timeLimit: selectedMinutes,
           status: 'pending'
         });
-        alert(`Challenge sent to ${window.currentOpponent.name}! Waiting for them to accept...`);
+        alert(`Challenge sent to ${window.currentOpponent.name} (${selectedMinutes} Mins)! Waiting for accept...`);
       }
     };
 
-    function launchMatchSession(matchId) {
+    function launchMatchSession(matchId, minutes) {
       window.game.reset();
       window.selectedSquare = null;
       document.getElementById('chatMessages').innerHTML = '<div><i>Unlimited Chat & Emojis active 😊♟️🔥</i></div>';
+
+      myTimeRemaining = minutes * 60;
+      oppTimeRemaining = minutes * 60;
+      startClocks();
 
       if (!window.currentOpponent.isAi && db) {
         matchRef = ref(db, 'matches/' + matchId + '/board');
@@ -800,11 +889,53 @@
 
       renderBoard();
       switchScreen('screenGame');
-      addChatMessage(`System: Match started! You play as ${window.myColor === 'w' ? 'WHITE ♔ (Moves First)' : 'BLACK ♚ (Moves Second)'}. 🔥`);
+      addChatMessage(`System: Match started! ${minutes} Mins limit. You are ${window.myColor === 'w' ? 'WHITE ♔' : 'BLACK ♚'}. 🔥`);
 
       if (window.currentOpponent.isAi && window.myColor === 'b') {
-        setTimeout(makeProAiMove, 500);
+        setTimeout(makeAiMove, 1200);
       }
+    }
+
+    function startClocks() {
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        if (window.game.game_over()) {
+          clearInterval(timerInterval);
+          return;
+        }
+
+        if (window.game.turn() === window.myColor) {
+          myTimeRemaining--;
+          if (myTimeRemaining <= 0) {
+            clearInterval(timerInterval);
+            alert("Time's up! You lose on time.");
+            window.player.iq = Math.max(0, window.player.iq - 5);
+            localStorage.setItem('sekato_iq', window.player.iq);
+            switchScreen('screenLose');
+          }
+        } else {
+          oppTimeRemaining--;
+          if (oppTimeRemaining <= 0) {
+            clearInterval(timerInterval);
+            alert("Opponent ran out of time! You win!");
+            window.player.iq += 100;
+            localStorage.setItem('sekato_iq', window.player.iq);
+            switchScreen('screenWin');
+          }
+        }
+        updateTimerDisplays();
+      }, 1000);
+    }
+
+    function updateTimerDisplays() {
+      document.getElementById('myTimerDisplay').innerText = `You: ${formatTime(myTimeRemaining)}`;
+      document.getElementById('oppTimerDisplay').innerText = `Opp: ${formatTime(oppTimeRemaining)}`;
+    }
+
+    function formatTime(secs) {
+      const m = Math.floor(secs / 60);
+      const s = secs % 60;
+      return `${m}:${s < 10 ? '0' : ''}${s}`;
     }
 
     function listenToMatchUpdates() {
@@ -876,6 +1007,7 @@
       document.getElementById('turnStatus').innerText = window.game.turn() === 'w' ? 'White turn' : 'Black turn';
 
       if (window.game.in_checkmate()) {
+        clearInterval(timerInterval);
         if (window.game.turn() !== window.myColor) {
           window.player.iq += 100;
           localStorage.setItem('sekato_iq', window.player.iq);
@@ -907,7 +1039,8 @@
           }
 
           if (window.currentOpponent.isAi && !window.game.game_over()) {
-            setTimeout(makeProAiMove, 400);
+            const thinkDelay = window.currentOpponent.aiLevel === 'hard' ? Math.floor(Math.random() * 1500) + 1000 : 500;
+            setTimeout(makeAiMove, thinkDelay);
           }
           return;
         }
@@ -922,13 +1055,61 @@
       renderBoard();
     }
 
-    function makeProAiMove() {
-      const possibleMoves = window.game.moves();
-      if (possibleMoves.length === 0) return;
+    /* AI Engines: Super Hard (hadibautdi) & Easy (ong) */
+    function makeAiMove() {
+      const moves = window.game.moves({ verbose: true });
+      if (moves.length === 0) return;
 
-      let selectedMove = possibleMoves.find(m => m.includes('x')) || possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
-      window.game.move(selectedMove);
-      renderBoard();
+      let chosenMove = null;
+
+      if (window.currentOpponent.aiLevel === 'easy') {
+        // ong AI: Simple random moves
+        chosenMove = moves[Math.floor(Math.random() * moves.length)];
+      } else {
+        // hadibautdi AI: High level position evaluation
+        let bestScore = -99999;
+        for (let m of moves) {
+          window.game.move(m);
+          let score = evaluatePosition();
+          window.game.undo();
+
+          if (m.captured) score += (pieceValues[m.captured] || 10) * 10;
+          if (m.san.includes('+')) score += 15;
+          if (m.san.includes('#')) score += 10000;
+
+          if (score > bestScore) {
+            bestScore = score;
+            chosenMove = m;
+          }
+        }
+      }
+
+      if (chosenMove) {
+        window.game.move(chosenMove);
+        renderBoard();
+      }
+    }
+
+    function evaluatePosition() {
+      let score = 0;
+      const board = window.game.board();
+      const aiColor = window.game.turn();
+
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const piece = board[r][c];
+          if (piece) {
+            const val = pieceValues[piece.type] || 0;
+            if (piece.color === aiColor) {
+              score += val;
+              if (r >= 2 && r <= 5 && c >= 2 && c <= 5) score += 5; // Center control
+            } else {
+              score -= val;
+            }
+          }
+        }
+      }
+      return score;
     }
 
     window.undoMove = function() {
@@ -940,6 +1121,7 @@
 
     window.resignGame = function() {
       if (confirm("Are you sure you want to give up? You will lose 5 IQ.")) {
+        clearInterval(timerInterval);
         window.player.iq = Math.max(0, window.player.iq - 5);
         localStorage.setItem('sekato_iq', window.player.iq);
         switchScreen('screenLose');
