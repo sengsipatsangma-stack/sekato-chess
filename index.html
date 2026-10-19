@@ -161,19 +161,6 @@
       text-align: center;
     }
 
-    .edit-btn {
-      background: var(--accent-yellow);
-      color: #111;
-      font-size: 14px;
-      font-weight: bold;
-      padding: 8px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      text-align: center;
-      display: none;
-    }
-
     .decline-btn {
       background: var(--danger-red);
       color: #fff;
@@ -512,7 +499,6 @@
           <option value="expert">3) Expert (+200 IQ)</option>
         </select>
         <button class="save-btn" id="saveProfileBtn" onclick="saveProfile()">SAVE</button>
-        <button class="edit-btn" id="editProfileBtn" onclick="enableProfileEditing()">✏️ CHANGE NAME / EDIT PROFILE</button>
       </div>
 
       <div class="option-list">
@@ -668,21 +654,10 @@
       document.getElementById('profCountry').disabled = true;
       document.getElementById('profAge').disabled = true;
       document.getElementById('profSkill').disabled = true;
-      document.getElementById('saveProfileBtn').innerText = "ENTER LOBBY";
+      document.getElementById('saveProfileBtn').innerText = "LOCKED (LOGGED IN)";
+      document.getElementById('saveProfileBtn').style.background = "#555";
       document.getElementById('saveProfileBtn').onclick = () => switchScreen('screenLobby');
-      document.getElementById('editProfileBtn').style.display = "block";
     }
-
-    window.enableProfileEditing = function() {
-      document.getElementById('profName').disabled = false;
-      document.getElementById('profCountry').disabled = false;
-      document.getElementById('profAge').disabled = false;
-      document.getElementById('profSkill').disabled = false;
-      document.getElementById('saveProfileBtn').innerText = "SAVE CHANGES";
-      document.getElementById('saveProfileBtn').style.background = "var(--accent-green)";
-      document.getElementById('saveProfileBtn').onclick = () => saveProfile(false);
-      document.getElementById('editProfileBtn').style.display = "none";
-    };
 
     window.switchScreen = function(screenId) {
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -702,12 +677,10 @@
 
       if (!isAuto) {
         const skill = document.getElementById('profSkill').value;
-        let startIq = window.player.iq;
-        if (!localStorage.getItem('sekato_iq')) {
-          if (skill === 'first') startIq = 300;
-          if (skill === 'medium') startIq = 250;
-          if (skill === 'expert') startIq = 200;
-        }
+        let startIq = 300;
+        if (skill === 'first') startIq = 300;
+        if (skill === 'medium') startIq = 250;
+        if (skill === 'expert') startIq = 200;
 
         window.player.name = nameInput;
         window.player.country = document.getElementById('profCountry').value;
@@ -823,18 +796,21 @@
       list.innerHTML = '';
       let count = 1;
 
+      // 1. Pro GM hadibautdi (Super Hard)
       const gmItem = document.createElement('div');
       gmItem.className = 'player-item';
       gmItem.innerHTML = `<div><span class="player-num">${count++}.</span><b>hadibautdi</b> <span class="badge-gm">PRO GM (HARD)</span></div> <span style="color:var(--accent-yellow)">IQ 999</span>`;
       gmItem.onclick = () => openChallenge('hadibautdi', 999, true, 'hard', null);
       list.appendChild(gmItem);
 
+      // 2. ong (Easy AI)
       const easyItem = document.createElement('div');
       easyItem.className = 'player-item';
       easyItem.innerHTML = `<div><span class="player-num">${count++}.</span><b>ong</b> <span class="badge-easy">EASY AI</span></div> <span style="color:#3498db">IQ 50</span>`;
       easyItem.onclick = () => openChallenge('ong', 50, true, 'easy', null);
       list.appendChild(easyItem);
 
+      // 3. You
       if (window.player.name) {
         const selfItem = document.createElement('div');
         selfItem.className = 'player-item';
@@ -842,6 +818,7 @@
         list.appendChild(selfItem);
       }
 
+      // 4. Undisappearing Players (Online & Offline)
       for (let id in window.liveOnlinePlayers) {
         if (id !== window.player.id) {
           const p = window.liveOnlinePlayers[id];
@@ -882,7 +859,7 @@
           timeLimit: selectedMinutes,
           status: 'pending'
         });
-        alert(`Challenge sent to ${window.currentOpponent.name} (${selectedMinutes} Mins)!`);
+        alert(`Challenge sent to ${window.currentOpponent.name} (${selectedMinutes} Mins)! Waiting for accept...`);
       }
     };
 
@@ -1078,6 +1055,7 @@
       renderBoard();
     }
 
+    /* AI Engines: Super Hard (hadibautdi) & Easy (ong) */
     function makeAiMove() {
       const moves = window.game.moves({ verbose: true });
       if (moves.length === 0) return;
@@ -1085,8 +1063,10 @@
       let chosenMove = null;
 
       if (window.currentOpponent.aiLevel === 'easy') {
+        // ong AI: Simple random moves
         chosenMove = moves[Math.floor(Math.random() * moves.length)];
       } else {
+        // hadibautdi AI: High level position evaluation
         let bestScore = -99999;
         for (let m of moves) {
           window.game.move(m);
@@ -1122,7 +1102,7 @@
             const val = pieceValues[piece.type] || 0;
             if (piece.color === aiColor) {
               score += val;
-              if (r >= 2 && r <= 5 && c >= 2 && c <= 5) score += 5;
+              if (r >= 2 && r <= 5 && c >= 2 && c <= 5) score += 5; // Center control
             } else {
               score -= val;
             }
