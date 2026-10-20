@@ -4,18 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>SEKATO CHESS</title>
-
-  <!-- Web App Manifest for PWABuilder / App Stores -->
-  <link rel="manifest" href="data:application/manifest+json,{
-    %22name%22:%22SEKATO%20CHESS%22,
-    %22short_name%22:%22SekatoChess%22,
-    %22start_url%22:%22/sekato-chess/%22,
-    %22display%22:%22standalone%22,
-    %22background_color%22:%22%2312181b%22,
-    %22theme_color%22:%22%232ecc71%22,
-    %22icons%22:[{%22src%22:%22https://via.placeholder.com/512.png?text=CHESS%22,%22sizes%22:%22512x512%22,%22type%22:%22image/png%22}]
-  }">
-
   <style>
     :root {
       --bg: #12181b;
@@ -116,13 +104,13 @@
 
     .title-banner {
       text-align: center;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
     }
 
     .title-banner h1 {
       font-size: 32px;
       color: var(--accent-yellow);
-      margin-bottom: 5px;
+      margin-bottom: 2px;
     }
 
     .title-banner span {
@@ -161,6 +149,34 @@
       border-color: #555;
     }
 
+    /* Audio Settings Toggle Row */
+    .settings-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #111;
+      border: 1px solid var(--accent-green);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .settings-row label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      color: var(--text-light);
+    }
+
+    .settings-row input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent-green);
+      cursor: pointer;
+    }
+
     .save-btn, .challenge-btn, .start-btn {
       background: var(--accent-green);
       color: #111;
@@ -171,19 +187,6 @@
       border-radius: 8px;
       cursor: pointer;
       text-align: center;
-    }
-
-    .edit-btn {
-      background: var(--accent-yellow);
-      color: #111;
-      font-size: 14px;
-      font-weight: bold;
-      padding: 8px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      text-align: center;
-      display: none;
     }
 
     .decline-btn {
@@ -199,17 +202,17 @@
     }
 
     .option-list {
-      margin-top: 15px;
-      font-size: 13px;
+      margin-top: 10px;
+      font-size: 12px;
       color: var(--accent-green);
-      line-height: 1.8;
+      line-height: 1.6;
     }
 
     /* Lobby */
     .mini-board-preview {
       width: 100%;
       aspect-ratio: 1;
-      max-height: 180px;
+      max-height: 150px;
       border: 2px solid var(--accent-green);
       display: grid;
       grid-template-columns: repeat(8, 1fr);
@@ -335,7 +338,7 @@
 
     .chess-board {
       width: 100%;
-      max-width: 350px;
+      max-width: 330px;
       aspect-ratio: 1 / 1;
       display: grid;
       grid-template-columns: repeat(8, 1fr);
@@ -425,7 +428,7 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      min-height: 90px;
+      min-height: 80px;
       overflow: hidden;
     }
 
@@ -523,15 +526,18 @@
           <option value="medium">2) Medium (+250 IQ)</option>
           <option value="expert">3) Expert (+200 IQ)</option>
         </select>
+
+        <!-- Audio Settings Toggles -->
+        <div class="settings-row">
+          <label><input type="checkbox" id="soundToggle" checked> Sound Effects</label>
+          <label><input type="checkbox" id="musicToggle" checked> Background Music</label>
+        </div>
+
         <button class="save-btn" id="saveProfileBtn" onclick="saveProfile()">SAVE</button>
-        <button class="edit-btn" id="editProfileBtn" onclick="enableProfileEditing()">✏️ CHANGE NAME / EDIT PROFILE</button>
       </div>
 
       <div class="option-list">
-        OPTION:<br>
-        1) First time ➔ 300 IQ<br>
-        2) Medium ➔ 250 IQ<br>
-        3) Expert ➔ 200 IQ
+        OPTION: 1) First time ➔ 300 IQ | 2) Medium ➔ 250 IQ | 3) Expert ➔ 200 IQ
       </div>
     </div>
 
@@ -632,6 +638,132 @@
     let oppTimeRemaining = 600;
     let timerInterval = null;
 
+    // --- Audio System (Web Audio API) ---
+    let audioCtx = null;
+    let musicInterval = null;
+
+    function getAudioContext() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      return audioCtx;
+    }
+
+    function playSound(type) {
+      const soundEnabled = document.getElementById('soundToggle').checked;
+      if (!soundEnabled) return;
+
+      try {
+        const ctx = getAudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        const now = ctx.currentTime;
+
+        if (type === 'move') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(400, now);
+          osc.frequency.exponentialRampToValueAtTime(200, now + 0.08);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+          osc.start(now);
+          osc.stop(now + 0.08);
+        } else if (type === 'capture') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(300, now);
+          osc.frequency.exponentialRampToValueAtTime(100, now + 0.12);
+          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+          osc.start(now);
+          osc.stop(now + 0.12);
+        } else if (type === 'win') {
+          osc.type = 'square';
+          [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+            const o = ctx.createOscillator();
+            const g = ctx.createGain();
+            o.connect(g);
+            g.connect(ctx.destination);
+            o.frequency.setValueAtTime(freq, now + idx * 0.12);
+            g.gain.setValueAtTime(0.15, now + idx * 0.12);
+            g.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.12 + 0.2);
+            o.start(now + idx * 0.12);
+            o.stop(now + idx * 0.12 + 0.2);
+          });
+        } else if (type === 'lose') {
+          osc.type = 'sawtooth';
+          [300, 250, 200, 150].forEach((freq, idx) => {
+            const o = ctx.createOscillator();
+            const g = ctx.createGain();
+            o.connect(g);
+            g.connect(ctx.destination);
+            o.frequency.setValueAtTime(freq, now + idx * 0.15);
+            g.gain.setValueAtTime(0.2, now + idx * 0.15);
+            g.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.15 + 0.25);
+            o.start(now + idx * 0.15);
+            o.stop(now + idx * 0.15 + 0.25);
+          });
+        }
+      } catch (e) {
+        console.log("Audio play error", e);
+      }
+    }
+
+    function startBackgroundMusic() {
+      stopBackgroundMusic();
+      const musicEnabled = document.getElementById('musicToggle').checked;
+      if (!musicEnabled) return;
+
+      const chords = [261.63, 329.63, 392.00, 523.25]; // C major chord loop
+      let step = 0;
+
+      musicInterval = setInterval(() => {
+        if (!document.getElementById('musicToggle').checked) return;
+        try {
+          const ctx = getAudioContext();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+
+          const now = ctx.currentTime;
+          osc.frequency.setValueAtTime(chords[step], now);
+          gain.gain.setValueAtTime(0.03, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+
+          osc.start(now);
+          osc.stop(now + 1.2);
+
+          step = (step + 1) % chords.length;
+        } catch(e) {}
+      }, 1500);
+    }
+
+    function stopBackgroundMusic() {
+      if (musicInterval) {
+        clearInterval(musicInterval);
+        musicInterval = null;
+      }
+    }
+
+    document.getElementById('musicToggle').addEventListener('change', (e) => {
+      if (e.target.checked) {
+        startBackgroundMusic();
+      } else {
+        stopBackgroundMusic();
+      }
+      localStorage.setItem('sekato_music', e.target.checked);
+    });
+
+    document.getElementById('soundToggle').addEventListener('change', (e) => {
+      localStorage.setItem('sekato_sound', e.target.checked);
+    });
+
     try {
       const app = initializeApp(firebaseConfig);
       db = getDatabase(app);
@@ -663,6 +795,11 @@
     const pieceValues = { p: 10, n: 30, b: 30, r: 50, q: 90, k: 900 };
 
     window.addEventListener('load', () => {
+      const savedSound = localStorage.getItem('sekato_sound');
+      if (savedSound !== null) document.getElementById('soundToggle').checked = savedSound === 'true';
+      const savedMusic = localStorage.getItem('sekato_music');
+      if (savedMusic !== null) document.getElementById('musicToggle').checked = savedMusic === 'true';
+
       if (window.player.name) {
         document.getElementById('profName').value = window.player.name;
         document.getElementById('profCountry').value = window.player.country;
@@ -673,6 +810,7 @@
         }
         saveProfile(true);
       }
+      startBackgroundMusic();
     });
 
     function lockProfileFields() {
@@ -680,25 +818,17 @@
       document.getElementById('profCountry').disabled = true;
       document.getElementById('profAge').disabled = true;
       document.getElementById('profSkill').disabled = true;
-      document.getElementById('saveProfileBtn').innerText = "ENTER LOBBY";
+      document.getElementById('saveProfileBtn').innerText = "LOCKED (LOGGED IN)";
+      document.getElementById('saveProfileBtn').style.background = "#555";
       document.getElementById('saveProfileBtn').onclick = () => switchScreen('screenLobby');
-      document.getElementById('editProfileBtn').style.display = "block";
     }
-
-    window.enableProfileEditing = function() {
-      document.getElementById('profName').disabled = false;
-      document.getElementById('profCountry').disabled = false;
-      document.getElementById('profAge').disabled = false;
-      document.getElementById('profSkill').disabled = false;
-      document.getElementById('saveProfileBtn').innerText = "SAVE CHANGES";
-      document.getElementById('saveProfileBtn').style.background = "var(--accent-green)";
-      document.getElementById('saveProfileBtn').onclick = () => saveProfile(false);
-      document.getElementById('editProfileBtn').style.display = "none";
-    };
 
     window.switchScreen = function(screenId) {
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
       document.getElementById(screenId).classList.add('active');
+
+      if (screenId === 'screenWin') playSound('win');
+      if (screenId === 'screenLose') playSound('lose');
     };
 
     window.goBack = function() {
@@ -714,12 +844,10 @@
 
       if (!isAuto) {
         const skill = document.getElementById('profSkill').value;
-        let startIq = window.player.iq;
-        if (!localStorage.getItem('sekato_iq')) {
-          if (skill === 'first') startIq = 300;
-          if (skill === 'medium') startIq = 250;
-          if (skill === 'expert') startIq = 200;
-        }
+        let startIq = 300;
+        if (skill === 'first') startIq = 300;
+        if (skill === 'medium') startIq = 250;
+        if (skill === 'expert') startIq = 200;
 
         window.player.name = nameInput;
         window.player.country = document.getElementById('profCountry').value;
@@ -894,7 +1022,7 @@
           timeLimit: selectedMinutes,
           status: 'pending'
         });
-        alert(`Challenge sent to ${window.currentOpponent.name} (${selectedMinutes} Mins)!`);
+        alert(`Challenge sent to ${window.currentOpponent.name} (${selectedMinutes} Mins)! Waiting for accept...`);
       }
     };
 
@@ -1061,8 +1189,15 @@
       }
 
       if (window.selectedSquare) {
+        const targetPiece = window.game.get(sqName);
         const move = window.game.move({ from: window.selectedSquare, to: sqName, promotion: 'q' });
         if (move) {
+          if (targetPiece) {
+            playSound('capture');
+          } else {
+            playSound('move');
+          }
+
           window.selectedSquare = null;
           renderBoard();
 
@@ -1117,6 +1252,11 @@
       }
 
       if (chosenMove) {
+        if (chosenMove.captured) {
+          playSound('capture');
+        } else {
+          playSound('move');
+        }
         window.game.move(chosenMove);
         renderBoard();
       }
@@ -1148,6 +1288,7 @@
       window.game.undo();
       if (window.currentOpponent.isAi) window.game.undo();
       window.selectedSquare = null;
+      playSound('move');
       renderBoard();
     };
 
