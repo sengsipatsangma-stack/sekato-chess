@@ -149,7 +149,6 @@
       border-color: #555;
     }
 
-    /* Audio Settings Toggle Row */
     .settings-row {
       display: flex;
       justify-content: space-between;
@@ -208,7 +207,6 @@
       line-height: 1.6;
     }
 
-    /* Lobby */
     .mini-board-preview {
       width: 100%;
       aspect-ratio: 1;
@@ -296,7 +294,6 @@
     .status-online { color: var(--accent-green); font-size: 11px; }
     .status-offline { color: var(--text-muted); font-size: 11px; }
 
-    /* Modals */
     .challenge-card {
       background: var(--card-bg);
       border: 2px solid var(--accent-green);
@@ -327,7 +324,6 @@
       display: flex;
     }
 
-    /* Board */
     .chess-board-wrapper {
       width: 100%;
       display: flex;
@@ -454,7 +450,6 @@
       font-size: 12px;
     }
 
-    /* Result Screens */
     .result-card {
       margin: auto;
       width: 85%;
@@ -488,13 +483,11 @@
 <body>
 
   <div class="app-container">
-    <!-- Header -->
     <div class="header-bar">
       <button class="back-btn" id="headerBackBtn" onclick="goBack()">⟲</button>
       <div class="header-title" id="headerTitle">SEKATO CHESS</div>
     </div>
 
-    <!-- Incoming Invitation Modal -->
     <div class="modal-overlay" id="inviteModal">
       <div class="challenge-card" style="width: 100%;">
         <h2 style="color: var(--accent-yellow);">CHALLENGE!</h2>
@@ -507,7 +500,6 @@
       </div>
     </div>
 
-    <!-- Screen 1: Registration -->
     <div class="screen active" id="screenProfile">
       <div class="title-banner">
         👑
@@ -527,7 +519,6 @@
           <option value="expert">3) Expert (+200 IQ)</option>
         </select>
 
-        <!-- Audio Settings Toggles -->
         <div class="settings-row">
           <label><input type="checkbox" id="soundToggle" checked> Sound Effects</label>
           <label><input type="checkbox" id="musicToggle" checked> Background Music</label>
@@ -541,7 +532,6 @@
       </div>
     </div>
 
-    <!-- Screen 2: Lobby -->
     <div class="screen" id="screenLobby">
       <div class="mini-board-preview" id="miniBoard"></div>
 
@@ -553,7 +543,6 @@
       </div>
     </div>
 
-    <!-- Screen 3: Challenge Modal -->
     <div class="screen" id="screenChallenge">
       <div class="challenge-card">
         <h2 id="oppNameDisplay">hadibautdi</h2>
@@ -572,7 +561,6 @@
       </div>
     </div>
 
-    <!-- Screen 4: Chess Board Screen -->
     <div class="screen" id="screenGame">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
         <span class="timer-display" id="oppTimerDisplay">Opponent: 10:00</span>
@@ -600,7 +588,6 @@
       </div>
     </div>
 
-    <!-- Screen 5: WIN Screen -->
     <div class="screen" id="screenWin">
       <div class="result-card win">
         <h2>YOU WIN</h2>
@@ -609,7 +596,6 @@
       </div>
     </div>
 
-    <!-- Screen 6: LOSE Screen -->
     <div class="screen" id="screenLose">
       <div class="result-card lose">
         <h2>YOU LOSE</h2>
@@ -641,6 +627,23 @@
     // --- Audio System (Web Audio API) ---
     let audioCtx = null;
     let musicInterval = null;
+
+    // Automatically mute/pause audio when switching tabs or minimizing
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        if (audioCtx && audioCtx.state === 'running') {
+          audioCtx.suspend();
+        }
+        stopBackgroundMusic();
+      } else {
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        if (document.getElementById('musicToggle').checked) {
+          startBackgroundMusic();
+        }
+      }
+    });
 
     function getAudioContext() {
       if (!audioCtx) {
@@ -716,13 +719,13 @@
     function startBackgroundMusic() {
       stopBackgroundMusic();
       const musicEnabled = document.getElementById('musicToggle').checked;
-      if (!musicEnabled) return;
+      if (!musicEnabled || document.hidden) return;
 
-      const chords = [261.63, 329.63, 392.00, 523.25]; // C major chord loop
+      const chords = [261.63, 329.63, 392.00, 523.25];
       let step = 0;
 
       musicInterval = setInterval(() => {
-        if (!document.getElementById('musicToggle').checked) return;
+        if (!document.getElementById('musicToggle').checked || document.hidden) return;
         try {
           const ctx = getAudioContext();
           const osc = ctx.createOscillator();
